@@ -1,9 +1,12 @@
 package mat.client.codelist;
 
+import mat.client.measure.metadata.CustomCheckBox;
+import mat.client.measure.metadata.Grid508;
 import mat.client.shared.ErrorMessageDisplay;
 import mat.client.shared.ErrorMessageDisplayInterface;
 import mat.client.shared.LabelBuilder;
 import mat.client.shared.ListBoxMVP;
+import mat.client.shared.MatContext;
 import mat.client.shared.PrimaryButton;
 import mat.client.shared.SecondaryButton;
 import mat.client.shared.SpacerWidget;
@@ -13,6 +16,7 @@ import mat.client.shared.search.HasPageSizeSelectionHandler;
 import mat.client.shared.search.HasSortHandler;
 import mat.client.shared.search.SearchResults;
 import mat.client.shared.search.SearchView;
+import mat.client.util.ClientConstants;
 import mat.model.CodeListSearchDTO;
 import mat.shared.ConstantMessages;
 
@@ -20,6 +24,7 @@ import com.google.gwt.event.dom.client.HasClickHandlers;
 import com.google.gwt.event.logical.shared.HasSelectionHandlers;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.FormPanel;
 import com.google.gwt.user.client.ui.HasValue;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -32,53 +37,89 @@ import com.google.gwt.user.client.ui.Widget;
 
 public class ManageCodeListSearchView implements ManageCodeListSearchPresenter.ValueSetSearchDisplay {
 	private FlowPanel searchCriteriaPanel = new FlowPanel();
-	/*private Anchor createNewAnchor = new Anchor("Create Value Set");
-	private Anchor createNewGroupedAnchor = new Anchor("Create Grouped Value Set");*/
+	private Panel createNewPanel;
 	private Button searchButton = new PrimaryButton("Search");
 	private TextBox searchInput = new TextBox();
-	private SearchView<CodeListSearchDTO> view = new ValueSetSearchView();
-	protected ErrorMessageDisplay errorMessages = new ErrorMessageDisplay();
-	private Panel createNewPanel;
+	Button transferButton = new PrimaryButton("Transfer");
+	private SearchView<CodeListSearchDTO> view;
 	
+	public Grid508 getDataTable() {
+		return view.getDataTable();
+	}
+	protected ErrorMessageDisplay errorMessages = new ErrorMessageDisplay();
+	protected ErrorMessageDisplay transferErrorMessages = new ErrorMessageDisplay();
 	private ValueSetSearchFilterPanel vssfp = new ValueSetSearchFilterPanel();
 	
 	/*US537*/
 	private Button createButton = new SecondaryButton("Create");
 	private ListBoxMVP options = new ListBoxMVP();
 
-	public ManageCodeListSearchView() {		
-		view.buildDataTable(new ManageCodeListSearchModel());
-		Widget searchText = LabelBuilder.buildLabelWithEmbeddedLink(searchInput, "Search for a Value Set","CodeList");
-		searchCriteriaPanel.add(errorMessages);
-		searchCriteriaPanel.add(new SpacerWidget());
-		
+	public ManageCodeListSearchView() {	
+		String currentUserRole = MatContext.get().getLoggedInUserRole();
 		/*US537*/
-		loadListBoxOptions();
-		searchCriteriaPanel.add(new Label("Create:"));
-		searchCriteriaPanel.add(options);
-		options.setName("Create:");
-		searchCriteriaPanel.add(createButton);
-		createButton.setTitle("Create");
-		searchCriteriaPanel.add(new SpacerWidget());
-		
-		searchCriteriaPanel.addStyleName("leftAligned");
-		searchCriteriaPanel.add(searchText);
-		
-		searchCriteriaPanel.add(vssfp.getPanel());
-		searchCriteriaPanel.add(new SpacerWidget());
-		searchCriteriaPanel.add(buildSearchWidget());
-		
-		searchCriteriaPanel.add(view.asWidget());
-		searchCriteriaPanel.setStyleName("contentPanel");
+		if(!currentUserRole.equalsIgnoreCase(ClientConstants.ADMINISTRATOR)){
+			view = new ValueSetSearchView();
+			view.buildDataTable(new ManageCodeListSearchModel());
+			Widget searchText = LabelBuilder.buildLabelWithEmbeddedLink(searchInput, "Search for a Value Set","CodeList");
+			searchCriteriaPanel.add(errorMessages);
+			searchCriteriaPanel.add(new SpacerWidget());
+			loadListBoxOptions();
+			searchCriteriaPanel.add(new Label("Create:"));
+			searchCriteriaPanel.add(options);
+			options.setName("Create:");
+			searchCriteriaPanel.add(createButton);
+			createButton.setTitle("Create");
+			searchCriteriaPanel.add(new SpacerWidget());
+			
+			searchCriteriaPanel.addStyleName("leftAligned");
+			searchCriteriaPanel.add(searchText);
+			
+			searchCriteriaPanel.add(vssfp.getPanel());
+			searchCriteriaPanel.add(new SpacerWidget());
+			searchCriteriaPanel.add(buildSearchWidget());
+			
+			searchCriteriaPanel.add(view.asWidget());
+			searchCriteriaPanel.setStyleName("contentPanel");
+		}else{
+			view = new AdminValueSetSearchView();
+			view.buildDataTable(new AdminManageCodeListSearchModel());
+			searchCriteriaPanel.add(errorMessages);
+			searchCriteriaPanel.add(new SpacerWidget());
+			searchCriteriaPanel.add(new SpacerWidget());
+			searchCriteriaPanel.add(buildSearchWidget());
+			
+			searchCriteriaPanel.add(view.asWidget());
+			searchCriteriaPanel.setStyleName("contentPanel");
+			searchCriteriaPanel.add(transferErrorMessages);
+			searchCriteriaPanel.add(new SpacerWidget());
+			searchCriteriaPanel.add(buildTransferWidget());
+			searchCriteriaPanel.add(new SpacerWidget()); 
+		}
+		MatContext.get().setManageCodeListSearchView(this);
 		
 	}
-	
 	
 	@Override
 	public ErrorMessageDisplayInterface getErrorMessageDisplay() {
 		return errorMessages;
 	}
-
+	
+	@Override	
+	public void clearAllCheckBoxes(Grid508 dataTable){
+			int rows = dataTable.getRowCount();
+			int cols = dataTable.getColumnCount();
+			for(int i = 0; i < rows; i++){
+				for(int j = 0; j < cols; j++){
+					Widget w = getDataTable().getWidget(i, j);
+					if(w instanceof CustomCheckBox){
+						CustomCheckBox checkBox = ((CustomCheckBox)w);	
+						if(checkBox.getValue()){
+							checkBox.setValue(false);										
+						}
+					}
+				}
+			}
+	}
 
 	private Widget buildSearchWidget(){
 		HorizontalPanel hp = new HorizontalPanel();
@@ -92,6 +133,13 @@ public class ManageCodeListSearchView implements ManageCodeListSearchPresenter.V
 		return hp;
 	}
 	
+	private Widget buildTransferWidget(){
+		FlowPanel hpT = new FlowPanel();
+		hpT.setStylePrimaryName("rightAlignButton");
+		hpT.add(transferButton);
+		return hpT;
+	}
+	
 	@Override
 	public Widget asWidget() {
 		return searchCriteriaPanel;
@@ -101,6 +149,12 @@ public class ManageCodeListSearchView implements ManageCodeListSearchPresenter.V
 	public HasClickHandlers getSearchButton() {
 		return searchButton;
 	}
+	
+	@Override
+	public HasClickHandlers getTransferButton() {
+		return transferButton;
+	}
+
 	@Override
 	public HasSelectionHandlers<CodeListSearchDTO> getSelectIdForEditTool() {
 		return view;
@@ -175,4 +229,11 @@ public class ManageCodeListSearchView implements ManageCodeListSearchPresenter.V
 	public ValueSetSearchFilterPanel getValueSetSearchFilterPanel() {
 		return vssfp;
 	}
+
+	@Override
+	public ErrorMessageDisplayInterface getTransferErrorMessageDisplay() {
+		return transferErrorMessages;
+	}
+
+	
 }

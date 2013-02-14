@@ -33,6 +33,7 @@ import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.HasValue;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.SimplePanel;
@@ -114,6 +115,8 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		//US 413. Interfaces to show or clear out Steward Other text boxes.
 		public void showOtherTextBox();
 		public void hideOtherTextBox();
+		
+		public Button getSaveBtn();
 			
 		
 	}
@@ -139,11 +142,15 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 	private ManageMeasureTypeModel currentMeasureTypeList;
 	private List<Author> authorList = new ArrayList<Author>();
 	private List<MeasureType> measureTypeList = new ArrayList<MeasureType>();
+	private List<Author> dbAuthorList = new ArrayList<Author>();
+	private List<MeasureType> dbMeasureTypeList = new ArrayList<MeasureType>();
 	private SimplePanel emptyWidget = new SimplePanel();
 	private HasVisible previousContinueButtons;
 	private long lastRequestTime;
 	private int maxEmeasureId;
 	private boolean editable = false;
+	private boolean isSubView = false;
+	
 	
 	
 	public MetaDataPresenter(MetaDataDetailDisplay mDisplay,AddEditAuthorsDisplay aDisplay,AddEditMeasureTypeDisplay mtDisplay,HasVisible pcButtons,ListBoxCodeProvider lp){
@@ -156,6 +163,7 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		metaDataDisplay.getEditAuthorsButton().addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
+				getMetaDataDisplay().getSaveErrorMsg().clear();
 				displayAddEditAuthors();
 			}
 		});
@@ -163,6 +171,7 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		metaDataDisplay.getEditMeasureTypeButton().addClickHandler(new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
+				getMetaDataDisplay().getSaveErrorMsg().clear();
 				displayAddEditMeasureType();
 			}
 		});
@@ -177,6 +186,7 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		addEditAuthorsDisplay.getReturnButton().addClickHandler(new ClickHandler(){
 			@Override
 			public void onClick(ClickEvent event) {
+				isSubView = false;
 				backToDetail();
 			}
 		});
@@ -454,7 +464,7 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		panel.add(metaDataDisplay.asWidget());
 	}
 	
-	private void backToDetail(){
+	public void backToDetail(){
 		previousContinueButtons.setVisible(true);
 		panel.clear();
 		panel.add(metaDataDisplay.asWidget());
@@ -517,11 +527,15 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		metaDataDisplay.getStratification().setValue(currentMeasureDetail.getStratification());
 		metaDataDisplay.getRiskAdjustment().setValue(currentMeasureDetail.getRiskAdjustment());
 		if(currentMeasureDetail.getAuthorList() != null){
-		metaDataDisplay.setAuthorsList(currentMeasureDetail.getAuthorList());
+			metaDataDisplay.setAuthorsList(currentMeasureDetail.getAuthorList());
+			dbAuthorList.clear();
+			dbAuthorList.addAll(currentMeasureDetail.getAuthorList());
 		}
 		authorList = currentMeasureDetail.getAuthorList();
 		if(currentMeasureDetail.getMeasureTypeList()!= null){
 			metaDataDisplay.setMeasureTypeList(currentMeasureDetail.getMeasureTypeList());
+			dbMeasureTypeList.clear();
+			dbMeasureTypeList.addAll(currentMeasureDetail.getMeasureTypeList());
 		}
 		measureTypeList = currentMeasureDetail.getMeasureTypeList();
 		editable = MatContext.get().getMeasureLockService().checkForEditPermission();
@@ -537,9 +551,11 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		
 	}
 
-	private void saveMetaDataInformation(final boolean dispSuccessMsg){
+	public void saveMetaDataInformation(final boolean dispSuccessMsg){
+		metaDataDisplay.getSaveErrorMsg().clear();
 		metaDataDisplay.getErrorMessageDisplay().clear();
 		metaDataDisplay.getSuccessMessageDisplay().clear();
+		metaDataDisplay.getSaveBtn().setFocus(true);
 		updateModelDetailsFromView();
 		if(MatContext.get().getMeasureLockService().checkForEditPermission()) {
 			Mat.showLoadingMessage();
@@ -556,6 +572,8 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 						}
 						currentMeasureDetail.setAuthorList(result.getAuthorList());
 						currentMeasureDetail.setMeasureTypeList(result.getMeasureTypeList());
+						setDbAuthorList(result.getAuthorList());
+						setDbMeasureTypeList(result.getMeasureTypeList());					
 						MatContext.get().getSynchronizationDelegate().setSavingMeasureDetails(false);
 					}
 					else{
@@ -578,6 +596,10 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 	}
 	
 	private void updateModelDetailsFromView(){
+		updateModelDetailsFromView(currentMeasureDetail, metaDataDisplay);
+	}
+	
+	public void updateModelDetailsFromView(ManageMeasureDetailModel currentMeasureDetail, MetaDataDetailDisplay metaDataDisplay){
 		currentMeasureDetail.setName(metaDataDisplay.getMeasureName().getText());
 		currentMeasureDetail.setShortName(metaDataDisplay.getShortName().getText());
 		currentMeasureDetail.setFinalizedDate(metaDataDisplay.getFinalizedDate().getText());
@@ -595,8 +617,7 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		currentMeasureDetail.setDenominatorExceptions(metaDataDisplay.getDenominatorExceptions().getValue());
 		currentMeasureDetail.setMeasurePopulation(metaDataDisplay.getMeasurePopulation().getValue());
 		currentMeasureDetail.setMeasureObservations(metaDataDisplay.getMeasureObservations().getValue());
-		
-		
+
 		currentMeasureDetail.setCopyright(metaDataDisplay.getCopyright().getValue());
 		currentMeasureDetail.setEndorseByNQF(metaDataDisplay.getEndorsebyNQF().getValue());
 		currentMeasureDetail.setGuidance(metaDataDisplay.getGuidance().getValue());
@@ -625,6 +646,8 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		currentMeasureDetail.setVersionNumber(metaDataDisplay.getVersionNumber().getText());
 		currentMeasureDetail.setAuthorList(authorList);
 		currentMeasureDetail.setMeasureTypeList(measureTypeList);
+		currentMeasureDetail.setToCompareAuthor(dbAuthorList);
+		currentMeasureDetail.setToCompareMeasure(dbMeasureTypeList);
 		currentMeasureDetail.setNqfId(metaDataDisplay.getNqfId().getValue());
 		if(metaDataDisplay.getEmeasureId().getValue() != null && !metaDataDisplay.getEmeasureId().getValue().equals("")){
 			currentMeasureDetail.seteMeasureId(new Integer(metaDataDisplay.getEmeasureId().getValue()));
@@ -639,17 +662,19 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 	
 	
 	private void displayAddEditAuthors(){
+		isSubView = true;
 		addEditAuthorsDisplay.setReturnToLink("Return to Previous");
 		currentAuthorsList = new ManageAuthorsModel(currentMeasureDetail.getAuthorList());
 		currentAuthorsList.setPageSize(SearchView.PAGE_SIZE_ALL);
 		addEditAuthorsDisplay.buildDataTable(currentAuthorsList);
-		panel.clear();
+		panel.clear();		
 		panel.add(addEditAuthorsDisplay.asWidget());
 		previousContinueButtons.setVisible(false);
 		Mat.focusSkipLists("MeasureComposer");
 	}
 	
 	private void displayAddEditMeasureType(){
+		isSubView = true;
 		addEditMeasureTypeDisplay.setReturnToLink("Return to Previous");
 		currentMeasureTypeList = new ManageMeasureTypeModel(currentMeasureDetail.getMeasureTypeList());
 		currentMeasureTypeList.setPageSize(SearchView.PAGE_SIZE_ALL);
@@ -698,9 +723,9 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 	}
 	@Override 
 	public void beforeClosingDisplay() {
-		if(currentMeasureDetail != null) {
+		/*if(currentMeasureDetail != null) {// Removed Auto Save
 			saveMetaDataInformation(false);
-		}
+		}*/
 		clearMessages();
 	}
 	
@@ -738,6 +763,137 @@ public class MetaDataPresenter extends BaseMetaDataPresenter implements MatPrese
 		metaDataDisplay.getErrorMessageDisplay().clear();
 		metaDataDisplay.getSuccessMessageDisplay().clear();
 	}
+
+	/**
+	 * @return the metaDataDisplay
+	 */
+	public MetaDataDetailDisplay getMetaDataDisplay() {
+		return metaDataDisplay;
+	}
+
+	/**
+	 * @param metaDataDisplay the metaDataDisplay to set
+	 */
+	public void setMetaDataDisplay(MetaDataDetailDisplay metaDataDisplay) {
+		this.metaDataDisplay = metaDataDisplay;
+	}
+
+	/**
+	 * @return the currentMeasureDetail
+	 */
+	public ManageMeasureDetailModel getCurrentMeasureDetail() {
+		return currentMeasureDetail;
+	}
+
+	/**
+	 * @param currentMeasureDetail the currentMeasureDetail to set
+	 */
+	public void setCurrentMeasureDetail(
+			ManageMeasureDetailModel currentMeasureDetail) {
+		this.currentMeasureDetail = currentMeasureDetail;
+	}
+
+	/**
+	 * @return the currentAuthorsList
+	 */
+	public ManageAuthorsModel getCurrentAuthorsList() {
+		return currentAuthorsList;
+	}
+
+	/**
+	 * @param currentAuthorsList the currentAuthorsList to set
+	 */
+	public void setCurrentAuthorsList(ManageAuthorsModel currentAuthorsList) {
+		this.currentAuthorsList = currentAuthorsList;
+	}
+
+	/**
+	 * @return the authorList
+	 */
+	public List<Author> getAuthorList() {
+		return authorList;
+	}
+
+	/**
+	 * @param authorList the authorList to set
+	 */
+	public void setAuthorList(List<Author> authorList) {
+		this.authorList = authorList;
+	}
+
+	/**
+	 * @return the dbAuthorList
+	 */
+	public List<Author> getDbAuthorList() {
+		return dbAuthorList;
+	}
+
+	/**
+	 * @param dbAuthorList the dbAuthorList to set
+	 */
+	public void setDbAuthorList(List<Author> dbAuthorList) {
+		this.dbAuthorList = dbAuthorList;
+	}
+
+	/**
+	 * @return the dbMeasureTypeList
+	 */
+	public List<MeasureType> getDbMeasureTypeList() {
+		return dbMeasureTypeList;
+	}
+
+	/**
+	 * @param dbMeasureTypeList the dbMeasureTypeList to set
+	 */
+	public void setDbMeasureTypeList(List<MeasureType> dbMeasureTypeList) {
+		this.dbMeasureTypeList = dbMeasureTypeList;
+	}
 	
-	
+	public void setFocusForSave(){
+		getMetaDataDisplay().getSaveBtn().setFocus(true);
+	}
+
+	/**
+	 * @return the addEditAuthorsDisplay
+	 */
+	public AddEditAuthorsDisplay getAddEditAuthorsDisplay() {
+		return addEditAuthorsDisplay;
+	}
+
+	/**
+	 * @param addEditAuthorsDisplay the addEditAuthorsDisplay to set
+	 */
+	public void setAddEditAuthorsDisplay(AddEditAuthorsDisplay addEditAuthorsDisplay) {
+		this.addEditAuthorsDisplay = addEditAuthorsDisplay;
+	}
+
+	/**
+	 * @return the addEditMeasureTypeDisplay
+	 */
+	public AddEditMeasureTypeDisplay getAddEditMeasureTypeDisplay() {
+		return addEditMeasureTypeDisplay;
+	}
+
+	/**
+	 * @param addEditMeasureTypeDisplay the addEditMeasureTypeDisplay to set
+	 */
+	public void setAddEditMeasureTypeDisplay(
+			AddEditMeasureTypeDisplay addEditMeasureTypeDisplay) {
+		this.addEditMeasureTypeDisplay = addEditMeasureTypeDisplay;
+	}
+
+	/**
+	 * @return the isSubView
+	 */
+	public boolean isSubView() {
+		return isSubView;
+	}
+
+	/**
+	 * @param isSubView the isSubView to set
+	 */
+	public void setSubView(boolean isSubView) {
+		this.isSubView = isSubView;
+	}
+
 }

@@ -13,6 +13,7 @@ import mat.client.codelist.events.EditCodeListEvent;
 import mat.client.codelist.events.EditGroupedCodeListEvent;
 import mat.client.event.MeasureSelectedEvent;
 import mat.client.history.HistoryModel;
+import mat.client.measure.metadata.Grid508;
 import mat.client.shared.ContentWithHeadingWidget;
 import mat.client.shared.ErrorMessageDisplayInterface;
 import mat.client.shared.HasVisible;
@@ -30,6 +31,7 @@ import mat.client.shared.search.PageSortEvent;
 import mat.client.shared.search.PageSortEventHandler;
 import mat.client.shared.search.SearchResultUpdate;
 import mat.client.shared.search.SearchResults;
+import mat.client.util.ClientConstants;
 import mat.model.CodeListSearchDTO;
 import mat.shared.ConstantMessages;
 
@@ -54,9 +56,9 @@ import com.google.gwt.user.client.ui.Widget;
 
 public class ManageCodeListSearchPresenter {
 	
-	private static final String MY_VALUE_SETS = "My Value Sets";
+	private  String MY_VALUE_SETS = "My Value Sets";
 	private static final String MY_VALUE_SETS_CREATE_DRAFT = "My Value Sets  > Create a Value Set Draft";
-	private static final String MY_VALUE_SETS_HISTORY = "My Value Sets  > History";
+	private String MY_VALUE_SETS_HISTORY = "My Value Sets  > History";
 	private boolean isObserverBusy = false;
 	
 	public static interface ValueSetSearchDisplay extends mat.client.shared.search.SearchDisplay {
@@ -66,8 +68,8 @@ public class ManageCodeListSearchPresenter {
 		public void buildDataTable(SearchResults<CodeListSearchDTO> results, boolean isAsc);
 		public HasSortHandler getPageSortTool();
 		public ErrorMessageDisplayInterface getErrorMessageDisplay();
-		
-
+		public ErrorMessageDisplayInterface getTransferErrorMessageDisplay();
+		public HasClickHandlers getTransferButton();
 		/*US537*/
 		public HasClickHandlers getCreateButton();
 		public void clearSelections();
@@ -76,7 +78,9 @@ public class ManageCodeListSearchPresenter {
 		public HasPageSizeSelectionHandler getPageSizeSelectionTool();
 		public int getPageSize();
 		public ValueSetSearchFilterPanel getValueSetSearchFilterPanel();
+		public Grid508 getDataTable();
 		
+		void clearAllCheckBoxes(Grid508 dataTable);
 	}
 	
 	public static interface HistoryDisplay {
@@ -103,6 +107,24 @@ public class ManageCodeListSearchPresenter {
 		public void setUserCommentsReadOnly(boolean readOnly);
 		
 	}
+	
+	public static interface TransferDisplay{
+		public Widget asWidget();
+		public HasClickHandlers getSaveButton();
+		public HasClickHandlers getCancelButton();
+		void buildDataTable(SearchResults<TransferOwnerShipModel.Result> results , List<CodeListSearchDTO> codeListIDs);
+		public String getSelectedValue();
+		public ErrorMessageDisplayInterface getErrorMessageDisplay();
+		public SuccessMessageDisplayInterface getSuccessMessageDisplay();
+		void buildHTMLForValueSets(List<CodeListSearchDTO> codeListIDs);
+		public HasPageSelectionHandler getPageSelectionTool();
+		public HasPageSizeSelectionHandler getPageSizeSelectionTool();
+		public int getPageSize();
+		void clearAllRadioButtons(Grid508 dataTable);
+		public Grid508 getDataTable();
+	}
+	
+	
 	public static interface DraftDisplay{
 		public Widget asWidget();
 		public ErrorMessageDisplayInterface getErrorMessageDisplay();
@@ -122,6 +144,7 @@ public class ManageCodeListSearchPresenter {
 	private ContentWithHeadingWidget panel = new ContentWithHeadingWidget();
 	private ValueSetSearchDisplay searchDisplay;
 	private String lastSearchText;
+	private TransferDisplay transferDisplay;
 	private int lastStartIndex;
 	private String currentSortColumn = getSortKey(0);
 	private boolean sortIsAscending = true;
@@ -132,6 +155,9 @@ public class ManageCodeListSearchPresenter {
 	private ManageValueSetModel draftValueSetResults;
 	private ManageCodeListDetailModel currentDetails;
 	private int startIndex = 1;
+	
+	private TransferOwnerShipModel model = null;
+	private AdminManageCodeListSearchModel searchModel;
 	
 	private ClickHandler cancelClickHandler = new ClickHandler() {
 		@Override
@@ -151,171 +177,115 @@ public class ManageCodeListSearchPresenter {
 		this.draftDisplay = dDisplay;
 		displaySearch();		
 		
-		searchDisplay.getSelectIdForEditTool().addSelectionHandler(new SelectionHandler<CodeListSearchDTO>() {
-			@Override
-			public void onSelection(SelectionEvent<CodeListSearchDTO> event) {
-				searchDisplay.getSearchString().setValue("");
-				if(event.getSelectedItem().isGroupedCodeList()) {
-					MatContext.get().getEventBus().fireEvent(new EditGroupedCodeListEvent(event.getSelectedItem().getId()));
-				}
-				else {
-					MatContext.get().getEventBus().fireEvent(new EditCodeListEvent(event.getSelectedItem().getId()));
-				}
-			}
-		});
+		searchDisplayHandlers(searchDisplay);
+		draftDisplayHandlers(draftDisplay);	
+		historyDisplayHandlers(historyDisplay); 	
 		
-		searchDisplay.getSearchButton().addClickHandler(new ClickHandler() {
+		MatContext.get().getEventBus().addHandler(MeasureSelectedEvent.TYPE, 
+				new MeasureSelectedEvent.Handler() {
+					@Override
+					public void onMeasureSelected(MeasureSelectedEvent event) {
+						//At any point whether the user in Read-only or View-only mode, we should allow the 
+						//User to create  codeList.
+						//searchDisplay.setCreateButtonsVisible(event.isEditable());
+					}
+				});
+	}
+	
+	public ManageCodeListSearchPresenter(ValueSetSearchDisplay sDisplayArg, HistoryDisplay argHistDisplay, HasVisible prevContButtons, DraftDisplay dDisplay, TransferDisplay tDisplay) {
+		this.searchDisplay = sDisplayArg;
+		this.historyDisplay = argHistDisplay;
+		this.buttonBar = (PreviousContinueButtonBar) prevContButtons;
+		this.draftDisplay = dDisplay;
+		this.transferDisplay = tDisplay;
+		displaySearch();		
+		
+		searchDisplayHandlers(searchDisplay);
+		draftDisplayHandlers(draftDisplay);	
+		historyDisplayHandlers(historyDisplay); 	
+		transferDisplayHandlers(transferDisplay);
+		MatContext.get().getEventBus().addHandler(MeasureSelectedEvent.TYPE, 
+				new MeasureSelectedEvent.Handler() {
+					@Override
+					public void onMeasureSelected(MeasureSelectedEvent event) {
+						//At any point whether the user in Read-only or View-only mode, we should allow the 
+						//User to create  codeList.
+						//searchDisplay.setCreateButtonsVisible(event.isEditable());
+					}
+				});
+	}
+	
+	private void transferDisplayHandlers(final TransferDisplay transferDisplay) {
+		
+		transferDisplay.getSaveButton().addClickHandler(new ClickHandler(){
 			@Override
 			public void onClick(ClickEvent event) {
-				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
-				int startIndex = 1;
-				currentSortColumn = getSortKey(0);
-				sortIsAscending = true;
-				search(searchDisplay.getSearchString().getValue(),
-						startIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+				transferDisplay.getErrorMessageDisplay().clear();
+				transferDisplay.getSuccessMessageDisplay().clear();
+				boolean userSelected = false;
+				for(int i=0;i<model.getData().size();i=i+1){
+					if(model.getData().get(i).isSelected()){
+						userSelected = true;
+						final String emailTo =model.getData().get(i).getEmailId();
+						final int rowIndex = i;
+						MatContext.get().getCodeListService().transferOwnerShipToUser(searchModel.getLisObjectId(),emailTo ,
+								new AsyncCallback<Void>(){
+									@Override
+									public void onFailure(Throwable caught) {
+										Window.alert(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+										searchModel.getTransferValueSetIDs().clear();;
+										searchModel.getLisObjectId().clear();
+										model.getData().get(rowIndex).setSelected(false);
+									}
+									@Override
+									public void onSuccess(Void result) {
+										transferDisplay.getSuccessMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getTransferOwnershipSuccess()+emailTo);
+										searchModel.getTransferValueSetIDs().clear();
+										searchModel.getLisObjectId().clear();
+										model.getData().get(rowIndex).setSelected(false);
+									}
+						});
+					}
+				}
+				if(userSelected==false){
+					transferDisplay.getSuccessMessageDisplay().clear();
+					//transferDisplay.getErrorMessageDisplay().setMessage("Please select at least one user to transfer ownership.");
+					
+				}
+					
+				transferDisplay.clearAllRadioButtons(transferDisplay.getDataTable());
+			}
+			
+		});
+		transferDisplay.getCancelButton().addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event) {
+				searchModel.getLisObjectId().clear();
+				searchModel.getTransferValueSetIDs().clear();
+				transferDisplay.getSuccessMessageDisplay().clear();
+				transferDisplay.getErrorMessageDisplay().clear();
+				displaySearch();
 			}
 		});
 		
-		searchDisplay.getPageSelectionTool().addPageSelectionHandler(new PageSelectionEventHandler() {
-			
+		transferDisplay.getPageSelectionTool().addPageSelectionHandler(new PageSelectionEventHandler() {
 			@Override
 			public void onPageSelection(PageSelectionEvent event) {
-				int startIndex = searchDisplay.getPageSize() * (event.getPageNumber() - 1) + 1;
-				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
-				search(lastSearchText, startIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+				int startIndex = transferDisplay.getPageSize() * (event.getPageNumber() - 1) + 1;
+				displayTransferView(startIndex, transferDisplay.getPageSize());
 			}
 		});
-		searchDisplay.getPageSizeSelectionTool().addPageSizeSelectionHandler(new PageSizeSelectionEventHandler() {
+		transferDisplay.getPageSizeSelectionTool().addPageSizeSelectionHandler(new PageSizeSelectionEventHandler() {
 			@Override
 			public void onPageSizeSelection(PageSizeSelectionEvent event) {
-				searchDisplay.getSearchString().setValue("");
-				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
-				search(searchDisplay.getSearchString().getValue(), lastStartIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+				displayTransferView(startIndex, transferDisplay.getPageSize());
 			}
 		});
-		
-		searchDisplay.getPageSortTool().addPageSortHandler(new PageSortEventHandler() {
-			@Override
-			public void onPageSort(PageSortEvent event) {
-				String sortColumn = getSortKey(event.getColumn());
-				if(sortColumn.equals(currentSortColumn)) {
-					sortIsAscending = !sortIsAscending;
-				}
-				else {
-					currentSortColumn = sortColumn;
-					sortIsAscending = true;
-				}
-				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
-				search(lastSearchText, lastStartIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
-			}
-		});
-		
-		/*US537*/
-		searchDisplay.getCreateButton().addClickHandler(new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-				if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_NEW_GROUPED_VALUE_SET)){
-					MatContext.get().getEventBus().fireEvent(new CreateNewGroupedCodeListEvent());
-				}else if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_NEW_VALUE_SET)){
-					MatContext.get().getEventBus().fireEvent(new CreateNewCodeListEvent());
-				}else if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_VALUE_SET_DRAFT)){
-					createValueSetDraftScreen();
-				}else{
-					searchDisplay.getErrorMessageDisplay().setMessage("Please select an option from the Create list box.");
-				}
-			}
-		});
-		
-		TextBox searchWidget = (TextBox)(searchDisplay.getSearchString());
-		searchWidget.addKeyUpHandler(new KeyUpHandler() {
-			
-			@Override
-			public void onKeyUp(KeyUpEvent event) {
-				if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER){
-					((Button)searchDisplay.getSearchButton()).click();
-	            }
-			}
-		});
-		
-		draftDisplay.getCancelButton().addClickHandler(cancelClickHandler);
-		
-		draftDisplay.getPageSelectionTool().addPageSelectionHandler(new PageSelectionEventHandler() {
-			@Override
-			public void onPageSelection(PageSelectionEvent event) {
-				int pageNumber = event.getPageNumber();
-				if(pageNumber == -1){ // if next button clicked
-					if(draftDisplay.getCurrentPage() == draftValueSetResults.getTotalpages()){
-						pageNumber = draftDisplay.getCurrentPage();
-					}else{
-						pageNumber = draftDisplay.getCurrentPage() + 1;
-					}
-				}else if(pageNumber == 0){ // if first button clicked
-					pageNumber = 1;
-				}else if(pageNumber == -19){ // if first button clicked
-					if(draftDisplay.getCurrentPage() == 1){
-						pageNumber = draftDisplay.getCurrentPage();
-					}else{
-						pageNumber = draftDisplay.getCurrentPage() - 1;
-					}
-				}else if(pageNumber == -9){ // if first button clicked
-					if(draftDisplay.getCurrentPage() == 1){
-						pageNumber = draftDisplay.getCurrentPage();
-					}else{
-						pageNumber = draftDisplay.getCurrentPage() - 1;
-					}
-				}
-				draftDisplay.setCurrentPage(pageNumber);
-				int pageSize = draftDisplay.getPageSize();
-				int startIndex = pageSize * (pageNumber - 1);
-				searchValueSetsForDraft(startIndex,draftDisplay.getPageSize());
-			}
-		});
-		draftDisplay.getPageSizeSelectionTool().addPageSizeSelectionHandler(new PageSizeSelectionEventHandler() {
-			@Override
-			public void onPageSizeSelection(PageSizeSelectionEvent event) {
-				draftDisplay.setPageSize(event.getPageSize());
-				searchValueSetsForDraft(startIndex,draftDisplay.getPageSize());
-			}
-		});
-		draftDisplay.getSaveButton().addClickHandler(new ClickHandler(){
-			@Override
-			public void onClick(ClickEvent event) {
-				//O&M 17
-				((Button)draftDisplay.getSaveButton()).setEnabled(false);
-				
-				draftDisplay.getErrorMessageDisplay().clear();
-				draftDisplay.getSuccessMessageDisplay().clear();
-				ManageValueSetSearchModel.Result selectedValueSet =  draftValueSetResults.getSelectedMeasure();
-				if(selectedValueSet.getId() != null){
-					MatContext.get().getCodeListService().createDraft(selectedValueSet.getId(), selectedValueSet.getOid(), new AsyncCallback<ManageValueSetSearchModel>() {
-						
-						@Override
-						public void onSuccess(ManageValueSetSearchModel result) {
-							//do nothing if no result
-							if(result.getResultsTotal()>0)
-								draftDisplay.getSuccessMessageDisplay().setMessage("Draft created successfully.");
-							//O&M 17
-							((Button)draftDisplay.getSaveButton()).setEnabled(true);
-						}
-						
-						@Override
-						public void onFailure(Throwable caught) {
-							draftDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
-							MatContext.get().recordTransactionEvent(null, null, null, "Unhandled Exception: "+caught.getLocalizedMessage(), 0);
-							//O&M 17
-							((Button)draftDisplay.getSaveButton()).setEnabled(true);
-						}
-					});
-				}else{
-					draftDisplay.getErrorMessageDisplay().setMessage("Please select a Measure Version to create a Draft.");
-					//O&M 17
-					((Button)draftDisplay.getSaveButton()).setEnabled(true);
-				}
-			}
-		});
-		
-		historyDisplay.getSaveButton().addClickHandler(new ClickHandler(){
+	}
+
+
+	private void historyDisplayHandlers(final HistoryDisplay historyDisplay) {
+			historyDisplay.getSaveButton().addClickHandler(new ClickHandler(){
 			@Override
 			public void onClick(ClickEvent event) {
 				
@@ -398,41 +368,256 @@ public class ManageCodeListSearchPresenter {
 			}
 		});
 		
-		MatContext.get().getEventBus().addHandler(MeasureSelectedEvent.TYPE, 
-				new MeasureSelectedEvent.Handler() {
-					
-					@Override
-					public void onMeasureSelected(MeasureSelectedEvent event) {
-						//At any point whether the user in Read-only or View-only mode, we should allow the 
-						//User to create  codeList.
-						//searchDisplay.setCreateButtonsVisible(event.isEditable());
-					}
-				});
 	}
-	
+
+	private void draftDisplayHandlers(final DraftDisplay draftDisplay) {
+		
+		draftDisplay.getCancelButton().addClickHandler(cancelClickHandler);
+		draftDisplay.getPageSelectionTool().addPageSelectionHandler(new PageSelectionEventHandler() {
+			@Override
+			public void onPageSelection(PageSelectionEvent event) {
+				int pageNumber = event.getPageNumber();
+				if(pageNumber == -1){ // if next button clicked
+					if(draftDisplay.getCurrentPage() == draftValueSetResults.getTotalpages()){
+						pageNumber = draftDisplay.getCurrentPage();
+					}else{
+						pageNumber = draftDisplay.getCurrentPage() + 1;
+					}
+				}else if(pageNumber == 0){ // if first button clicked
+					pageNumber = 1;
+				}else if(pageNumber == -19){ // if first button clicked
+					if(draftDisplay.getCurrentPage() == 1){
+						pageNumber = draftDisplay.getCurrentPage();
+					}else{
+						pageNumber = draftDisplay.getCurrentPage() - 1;
+					}
+				}else if(pageNumber == -9){ // if first button clicked
+					if(draftDisplay.getCurrentPage() == 1){
+						pageNumber = draftDisplay.getCurrentPage();
+					}else{
+						pageNumber = draftDisplay.getCurrentPage() - 1;
+					}
+				}
+				draftDisplay.setCurrentPage(pageNumber);
+				int pageSize = draftDisplay.getPageSize();
+				int startIndex = pageSize * (pageNumber - 1);
+				searchValueSetsForDraft(startIndex,draftDisplay.getPageSize());
+			}
+		});
+		draftDisplay.getPageSizeSelectionTool().addPageSizeSelectionHandler(new PageSizeSelectionEventHandler() {
+			@Override
+			public void onPageSizeSelection(PageSizeSelectionEvent event) {
+				draftDisplay.setPageSize(event.getPageSize());
+				searchValueSetsForDraft(startIndex,draftDisplay.getPageSize());
+			}
+		});
+		draftDisplay.getSaveButton().addClickHandler(new ClickHandler(){
+			@Override
+			public void onClick(ClickEvent event) {
+				//O&M 17
+				((Button)draftDisplay.getSaveButton()).setEnabled(false);
+				
+				draftDisplay.getErrorMessageDisplay().clear();
+				draftDisplay.getSuccessMessageDisplay().clear();
+				ManageValueSetSearchModel.Result selectedValueSet =  draftValueSetResults.getSelectedMeasure();
+				if(selectedValueSet.getId() != null){
+					MatContext.get().getCodeListService().createDraft(selectedValueSet.getId(), selectedValueSet.getOid(), new AsyncCallback<ManageValueSetSearchModel>() {
+						
+						@Override
+						public void onSuccess(ManageValueSetSearchModel result) {
+							//do nothing if no result
+							if(result.getResultsTotal()>0)
+								draftDisplay.getSuccessMessageDisplay().setMessage("Draft created successfully.");
+							//O&M 17
+							((Button)draftDisplay.getSaveButton()).setEnabled(true);
+						}
+						
+						@Override
+						public void onFailure(Throwable caught) {
+							draftDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+							MatContext.get().recordTransactionEvent(null, null, null, "Unhandled Exception: "+caught.getLocalizedMessage(), 0);
+							//O&M 17
+							((Button)draftDisplay.getSaveButton()).setEnabled(true);
+						}
+					});
+				}else{
+					draftDisplay.getErrorMessageDisplay().setMessage("Please select a Measure Version to create a Draft.");
+					//O&M 17
+					((Button)draftDisplay.getSaveButton()).setEnabled(true);
+				}
+			}
+		});
+		
+	}
+
+	private void searchDisplayHandlers(final ValueSetSearchDisplay searchDisplay) {
+		
+		searchDisplay.getSelectIdForEditTool().addSelectionHandler(new SelectionHandler<CodeListSearchDTO>() {
+			@Override
+			public void onSelection(SelectionEvent<CodeListSearchDTO> event) {
+				searchDisplay.getSearchString().setValue("");
+				if(!ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+					if(event.getSelectedItem().isGroupedCodeList()) {
+						MatContext.get().getEventBus().fireEvent(new EditGroupedCodeListEvent(event.getSelectedItem().getId()));
+					}
+					else {
+						MatContext.get().getEventBus().fireEvent(new EditCodeListEvent(event.getSelectedItem().getId()));
+					}
+				}
+			}
+		});
+		searchDisplay.getTransferButton().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				searchDisplay.clearAllCheckBoxes(searchDisplay.getDataTable());
+				displayTransferView(startIndex,transferDisplay.getPageSize());
+			}
+		});
+		searchDisplay.getSearchButton().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
+				int startIndex = 1;
+				currentSortColumn = getSortKey(0);
+				sortIsAscending = true;
+				if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+					 filter = searchDisplay.getValueSetSearchFilterPanel().ALL_VALUE_SETS;
+				}
+				search(searchDisplay.getSearchString().getValue(),
+						startIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+			}
+		});
+		searchDisplay.getPageSelectionTool().addPageSelectionHandler(new PageSelectionEventHandler() {
+			@Override
+			public void onPageSelection(PageSelectionEvent event) {
+				int startIndex = searchDisplay.getPageSize() * (event.getPageNumber() - 1) + 1;
+				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
+				if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+					 filter = searchDisplay.getValueSetSearchFilterPanel().ALL_VALUE_SETS;
+				}
+				search(lastSearchText, startIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+			}
+		});
+		searchDisplay.getPageSizeSelectionTool().addPageSizeSelectionHandler(new PageSizeSelectionEventHandler() {
+			@Override
+			public void onPageSizeSelection(PageSizeSelectionEvent event) {
+				searchDisplay.getSearchString().setValue("");
+				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
+				if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+					 filter = searchDisplay.getValueSetSearchFilterPanel().ALL_VALUE_SETS;
+				}
+				search(searchDisplay.getSearchString().getValue(), lastStartIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+			}
+		});
+		searchDisplay.getPageSortTool().addPageSortHandler(new PageSortEventHandler() {
+			@Override
+			public void onPageSort(PageSortEvent event) {
+				String sortColumn = getSortKey(event.getColumn());
+				if(sortColumn.equals(currentSortColumn)) {
+					sortIsAscending = !sortIsAscending;
+				}
+				else {
+					currentSortColumn = sortColumn;
+					sortIsAscending = true;
+				}
+				int filter = searchDisplay.getValueSetSearchFilterPanel().getSelectedIndex();
+				if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+					 filter = searchDisplay.getValueSetSearchFilterPanel().ALL_VALUE_SETS;
+				}
+				search(lastSearchText, lastStartIndex, currentSortColumn, sortIsAscending,defaultCodeList, filter);
+			}
+		});
+		/*US537*/
+		searchDisplay.getCreateButton().addClickHandler(new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_NEW_GROUPED_VALUE_SET)){
+					MatContext.get().getEventBus().fireEvent(new CreateNewGroupedCodeListEvent());
+				}else if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_NEW_VALUE_SET)){
+					MatContext.get().getEventBus().fireEvent(new CreateNewCodeListEvent());
+				}else if(searchDisplay.getSelectedOption().equalsIgnoreCase(ConstantMessages.CREATE_VALUE_SET_DRAFT)){
+					createValueSetDraftScreen();
+				}else{
+					searchDisplay.getErrorMessageDisplay().setMessage("Please select an option from the Create list box.");
+				}
+			}
+		});
+		
+		TextBox searchWidget = (TextBox)(searchDisplay.getSearchString());
+		searchWidget.addKeyUpHandler(new KeyUpHandler() {
+			@Override
+			public void onKeyUp(KeyUpEvent event) {
+				if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER){
+					((Button)searchDisplay.getSearchButton()).click();
+	            }
+			}
+		});
+	}
+
+	@SuppressWarnings("static-access")
 	void resetDisplay() {
 		currentSortColumn = getSortKey(0);
 		sortIsAscending = true;
-		int filter = searchDisplay.getValueSetSearchFilterPanel().getDefaultFilter();
+		int filter;
+		if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+			 filter = searchDisplay.getValueSetSearchFilterPanel().ALL_VALUE_SETS;
+		}else{
+			filter = searchDisplay.getValueSetSearchFilterPanel().getDefaultFilter();
+		}
+		
 		searchDisplay.getValueSetSearchFilterPanel().resetFilter();
 		search("", 1, currentSortColumn, sortIsAscending,defaultCodeList, filter);
 		searchDisplay.clearSelections();
+		
 	}
 	
 	private void displaySearch() {
+		if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+			MY_VALUE_SETS = "Value Sets";
+		}
 		resetPanel(searchDisplay.asWidget(), MY_VALUE_SETS);
 	}
 	
-
+	private void displayTransferView(int startIndex, int pageSize){
+		final ArrayList<CodeListSearchDTO> transferValueSetIDs = searchModel.getTransferValueSetIDs();
+		searchDisplay.getErrorMessageDisplay().clear();
+		searchDisplay.getTransferErrorMessageDisplay().clear();
+		transferDisplay.getErrorMessageDisplay().clear();
+		if(transferValueSetIDs.size() !=0){
+			
+			showSearchingBusy(true);
+			MatContext.get().getCodeListService().searchUsers(1,pageSize,new AsyncCallback<TransferOwnerShipModel>(){
+				@Override
+				public void onFailure(Throwable caught) {
+					Window.alert(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+					showSearchingBusy(false);
+				}
+				@Override
+				public void onSuccess(TransferOwnerShipModel result) {
+					transferDisplay.buildHTMLForValueSets(transferValueSetIDs);
+					transferDisplay.buildDataTable(result,transferValueSetIDs);
+					resetPanel(transferDisplay.asWidget(), "Value Set Ownership >  Value Set Ownership Transfer");
+					showSearchingBusy(false);
+					model = result;
+				}
+			});
+			
+		}else{
+			searchDisplay.getTransferErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getTransferCheckBoxError());
+		}
+		
+	}
 	
 	private void history() {		
-		//historyDisplay.getErrorMessageDisplay().clear();
 		
 		int pageNumber = historyDisplay.getCurrentPage();
 		int pageSize = historyDisplay.getPageSize();
 		int startIndex = pageSize * (pageNumber - 1);
 		searchHistory(historyDisplay.getCodeListId(), startIndex, pageSize);		
-
+		if(ClientConstants.ADMINISTRATOR.equalsIgnoreCase(MatContext.get().getLoggedInUserRole())){
+			MY_VALUE_SETS_HISTORY = "Value Sets Ownership  > History";
+			searchDisplay.getTransferErrorMessageDisplay().clear();
+		}
 		resetPanel(historyDisplay.asWidget(), MY_VALUE_SETS_HISTORY);
 		Mat.focusSkipLists("MainContent");
 	}
@@ -466,81 +651,150 @@ public class ManageCodeListSearchPresenter {
 		int pageSize = searchDisplay.getPageSize();
 		final boolean isAscending = isAsc;
 		showSearchingBusy(true);
-		
-		MatContext.get().getCodeListService().search(searchText,
-				startIndex, pageSize, 
-				sortColumn, isAsc,defaultCodeList, filter, 
-				new AsyncCallback<ManageCodeListSearchModel>() {
-			@Override
-			public void onSuccess(ManageCodeListSearchModel result) {
-				isObserverBusy = false;
-				CodeListSearchResultsAdapter adapter = new CodeListSearchResultsAdapter();
-				adapter.setData(result);
-				adapter.setObserver(new CodeListSearchResultsAdapter.Observer() {
-					@Override
-					public void onHistoryClicked(CodeListSearchDTO result) {
-						historyDisplay.setCodeListId(result.getId());
-						historyDisplay.setCodeListName(result.getName());
-						historyDisplay.reset();
-						historyDisplay.setReturnToLinkText("<< Return to Value Set Library");
-						historyDisplay.setUserCommentsReadOnly(!result.isDraft());
-						history();
-					}
-					@Override
-					public void onCloneClicked(CodeListSearchDTO result) {
-						if(!isObserverBusy){
-							isObserverBusy = true;
-							String id = result.getId();
-							MatContext.get().getCodeListService().createClone(id, new AsyncCallback<ManageValueSetSearchModel>(){
+		searchDisplay.getErrorMessageDisplay().clear();
+		searchDisplay.getTransferErrorMessageDisplay().clear();
+		if(MatContext.get().getLoggedInUserRole().equalsIgnoreCase(ClientConstants.ADMINISTRATOR)){
+			MatContext.get().getCodeListService().searchForAdmin(searchText,
+																 startIndex, pageSize, 
+																 sortColumn, isAsc,defaultCodeList, filter, 
+																 new AsyncCallback<AdminManageCodeListSearchModel>() {
+						@Override
+						public void onFailure(Throwable caught) {
+							searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+							MatContext.get().recordTransactionEvent(null, null, null, "Unhandled Exception: "+caught.getLocalizedMessage(), 0);
+							showSearchingBusy(false);
+						}
+						@Override
+						public void onSuccess(AdminManageCodeListSearchModel result) {
+							result.setTransferValueSetIDs(new ArrayList<CodeListSearchDTO>());
+							result.setLisObjectId(new ArrayList<String>());
+							searchModel = result;
+							MatContext.get().setManageCodeListSearcModel(searchModel);
+							isObserverBusy = false;
+							AdminCodeListSearchResultsAdapter adapter = new AdminCodeListSearchResultsAdapter();
+							adapter.setData(result);
+							adapter.setObserver(new AdminCodeListSearchResultsAdapter.Observer() {
 								@Override
-								public void onFailure(Throwable caught) {
+								public void onHistoryClicked(CodeListSearchDTO codeList) {
+									historyDisplay.setCodeListId(codeList.getId());
+									historyDisplay.setCodeListName(codeList.getName());
+									historyDisplay.reset();
+									historyDisplay.setReturnToLinkText("<< Return to Value Set Ownership");
+									historyDisplay.setUserCommentsReadOnly(!codeList.isDraft());
+									history();
 								}
+
 								@Override
-								public void onSuccess(ManageValueSetSearchModel result) {
-									if(result != null){
-										boolean isGroupedCodeList = result.get(0).isGrouped();
-										String id = result.getKey(0);
-										if(isGroupedCodeList) {
-											MatContext.get().getEventBus().fireEvent(new EditGroupedCodeListEvent(id));
-										}
-										else {
-											MatContext.get().getEventBus().fireEvent(new EditCodeListEvent(id));
-										}
+								public void onTransferClicked(CodeListSearchDTO codeList) {
+										searchDisplay.getErrorMessageDisplay().clear();
+										searchDisplay.getTransferErrorMessageDisplay().clear();
+										updateTransferIDs(codeList,searchModel);
+								}
+
+							});
+							SearchResultUpdate sru = new SearchResultUpdate();
+							sru.update(result, (TextBox)searchDisplay.getSearchString(), lastSearchText);
+							sru = null;
+							if(result.getResultsTotal() == 0 && !lastSearchText.isEmpty()){
+								searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getNoCodeListsMessage());
+							}else{
+								searchDisplay.getErrorMessageDisplay().clear();
+							}
+							searchDisplay.buildDataTable(adapter, isAscending);
+							displaySearch();
+							searchDisplay.getErrorMessageDisplay().setFocus();
+							showSearchingBusy(false);
+						}
+			});
+		}else{
+			
+			MatContext.get().getCodeListService().search(searchText,
+														startIndex, pageSize, 
+														sortColumn, isAsc,defaultCodeList, filter, 
+														new AsyncCallback<ManageCodeListSearchModel>() {
+				@Override
+				public void onSuccess(ManageCodeListSearchModel result) {
+					isObserverBusy = false;
+					CodeListSearchResultsAdapter adapter = new CodeListSearchResultsAdapter();
+					adapter.setData(result);
+					adapter.setObserver(new CodeListSearchResultsAdapter.Observer() {
+						@Override
+						public void onHistoryClicked(CodeListSearchDTO result) {
+							historyDisplay.setCodeListId(result.getId());
+							historyDisplay.setCodeListName(result.getName());
+							historyDisplay.reset();
+							historyDisplay.setReturnToLinkText("<< Return to Value Set Library");
+							historyDisplay.setUserCommentsReadOnly(!result.isDraft());
+							history();
+						}
+						@Override
+						public void onCloneClicked(CodeListSearchDTO result) {
+							if(!isObserverBusy){
+								isObserverBusy = true;
+								String id = result.getId();
+								MatContext.get().getCodeListService().createClone(id, new AsyncCallback<ManageValueSetSearchModel>(){
+									@Override
+									public void onFailure(Throwable caught) {
 									}
-								}});
+									@Override
+									public void onSuccess(ManageValueSetSearchModel result) {
+										if(result != null){
+											boolean isGroupedCodeList = result.get(0).isGrouped();
+											String id = result.getKey(0);
+											if(isGroupedCodeList) {
+												MatContext.get().getEventBus().fireEvent(new EditGroupedCodeListEvent(id));
+											}
+											else {
+												MatContext.get().getEventBus().fireEvent(new EditCodeListEvent(id));
+											}
+										}
+									}});
+							}
+						}
+						@Override
+						public void onExportClicked(CodeListSearchDTO result) {
+							String id = result.getId();
+							String url = GWT.getModuleBaseURL() + "export?id=" + id + "&format=valueset";
+							Window.open(url + "&type=save", "_self", "");	
 						}
 					}
-					@Override
-					public void onExportClicked(CodeListSearchDTO result) {
-						String id = result.getId();
-						String url = GWT.getModuleBaseURL() + "export?id=" + id + "&format=valueset";
-						Window.open(url + "&type=save", "_self", "");	
+					);
+				
+					SearchResultUpdate sru = new SearchResultUpdate();
+					sru.update(result, (TextBox)searchDisplay.getSearchString(), lastSearchText);
+					sru = null;
+					if(result.getResultsTotal() == 0 && !lastSearchText.isEmpty()){
+						searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getNoCodeListsMessage());
+					}else{
+						searchDisplay.getErrorMessageDisplay().clear();
 					}
+					searchDisplay.buildDataTable(adapter, isAscending);
+					displaySearch();
+					searchDisplay.getErrorMessageDisplay().setFocus();
+					showSearchingBusy(false);
 				}
-				);
-				
-				
-				SearchResultUpdate sru = new SearchResultUpdate();
-				sru.update(result, (TextBox)searchDisplay.getSearchString(), lastSearchText);
-				sru = null;
-				
-				if(result.getResultsTotal() == 0 && !lastSearchText.isEmpty()){
-					searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getNoCodeListsMessage());
-				}else{
-					searchDisplay.getErrorMessageDisplay().clear();
+				@Override
+				public void onFailure(Throwable caught) {
+					searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+					MatContext.get().recordTransactionEvent(null, null, null, "Unhandled Exception: "+caught.getLocalizedMessage(), 0);
+					showSearchingBusy(false);
 				}
-				searchDisplay.buildDataTable(adapter, isAscending);
-				displaySearch();
-				searchDisplay.getErrorMessageDisplay().setFocus();
-				showSearchingBusy(false);
+			});
+		}
+	}
+	
+	private void updateTransferIDs(CodeListSearchDTO codeList,AdminManageCodeListSearchModel model) {
+		if(codeList.isTransferable()){
+			model.getTransferValueSetIDs().add(codeList);
+			model.getLisObjectId().add(codeList.getId());
+		}else{
+			for(int i=0 ;i< model.getTransferValueSetIDs().size();i++){
+				if(codeList.getId() == model.getTransferValueSetIDs().get(i).getId()){
+					model.getTransferValueSetIDs().remove(i);
+					model.getLisObjectId().remove(i);
+				}
 			}
-			@Override
-			public void onFailure(Throwable caught) {
-				searchDisplay.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
-				MatContext.get().recordTransactionEvent(null, null, null, "Unhandled Exception: "+caught.getLocalizedMessage(), 0);
-				showSearchingBusy(false);
-			}
-		});
+		}
 	}
 	
 	private void showSearchingBusy(boolean busy){
@@ -614,4 +868,5 @@ public class ManageCodeListSearchPresenter {
 		panel.setContent(w);
 	}
 	
+
 }

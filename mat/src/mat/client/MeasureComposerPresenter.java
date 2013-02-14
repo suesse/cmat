@@ -48,7 +48,7 @@ public class MeasureComposerPresenter implements MatPresenter, Enableable {
 		measurePackagePresenter = (MeasurePackagePresenter) buildMeasurePackageWidget();
 		measureComposerTabLayout = new MatTabLayoutPanel(true);
 		measureComposerTabLayout.setId("measureComposerTabLayout");
-		measureComposerTabLayout.addPresenter(buildMeasureMetaDataPresenter(),"Measure Details");		
+		measureComposerTabLayout.addPresenter(metaDataPresenter,"Measure Details");	
 		measureComposerTabLayout.addPresenter(clauseWorkspace,"Clause Workspace");
 		measureComposerTabLayout.addPresenter(buildMeasurePackageWidget(), "Measure Packager");
 	
@@ -175,21 +175,29 @@ public class MeasureComposerPresenter implements MatPresenter, Enableable {
 		MatContext.get().getMeasureLockService().releaseMeasureLock();
 		Command waitForUnlock = new Command(){
 			public void execute() {
+			  System.out.println("Executing waitForUnlock Command:"+MatContext.get().getMeasureLockService().isResettingLock());	
 	 		  if(!MatContext.get().getMeasureLockService().isResettingLock()){
 	 			  measureComposerTabLayout.close();
+	 			  measureComposerTabLayout.updateHeaderSelection(0);
+	 			  measureComposerTabLayout.setSelectedIndex(0);
 	 			  buttonBar.state = measureComposerTabLayout.getSelectedIndex();
 	 			  buttonBar.setPageNamesOnState();
+	 			  System.out.println("Closing measureComposerTabLayout...");
 	 		  }else{
 	 			  DeferredCommand.addCommand(this);
 	 		  }
 	 	   }
 	 	};
-	 	if(MatContext.get().getMeasureLockService().isResettingLock())
+	 	if(MatContext.get().getMeasureLockService().isResettingLock()){
 	 		waitForUnlock.execute();
+	 	}
 	 	else{
 	 	    measureComposerTabLayout.close();
-		  	buttonBar.state = measureComposerTabLayout.getSelectedIndex();
+	 	    measureComposerTabLayout.updateHeaderSelection(0);
+	 	    measureComposerTabLayout.setSelectedIndex(0);
+	 	    buttonBar.state = measureComposerTabLayout.getSelectedIndex();
 		  	buttonBar.setPageNamesOnState();
+	 	    System.out.println("Closing measureComposerTabLayout...");
 	 	}
 		
 	}
@@ -208,7 +216,7 @@ public class MeasureComposerPresenter implements MatPresenter, Enableable {
 	}
 	private MatPresenter buildMeasureMetaDataPresenter(){
 		MetaDataView mdV = new MetaDataView();
-		AddEditAuthorsView aeaV = new AddEditAuthorsView();
+		AddEditAuthorsView aeaV = new AddEditAuthorsView();		
 		AddEditMeasureTypeView aemtV = new AddEditMeasureTypeView();
 		MetaDataPresenter mdP = new MetaDataPresenter(mdV,aeaV,aemtV,buttonBar,MatContext.get().getListBoxCodeProvider());
 		return mdP;
@@ -248,6 +256,35 @@ public class MeasureComposerPresenter implements MatPresenter, Enableable {
 	public void setEnabled(boolean enabled) {
 		buttonBar.setEnabled(enabled);
 		measureComposerTabLayout.setEnabled(enabled);
+	}
+
+	/**
+	 * @return the metaDataPresenter
+	 */
+	public MetaDataPresenter getMetaDataPresenter() {
+		return metaDataPresenter;
+	}
+
+	/**
+	 * @param metaDataPresenter the metaDataPresenter to set
+	 */
+	public void setMetaDataPresenter(MetaDataPresenter metaDataPresenter) {
+		this.metaDataPresenter = metaDataPresenter;
+	}
+
+	/**
+	 * @return the measureComposerTabLayout
+	 */
+	public MatTabLayoutPanel getMeasureComposerTabLayout() {
+		return measureComposerTabLayout;
+	}
+
+	/**
+	 * @param measureComposerTabLayout the measureComposerTabLayout to set
+	 */
+	public void setMeasureComposerTabLayout(
+			MatTabLayoutPanel measureComposerTabLayout) {
+		this.measureComposerTabLayout = measureComposerTabLayout;
 	}
 	
 }

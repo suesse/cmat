@@ -15,6 +15,7 @@ import mat.DTO.HasListBoxDTO;
 import mat.client.codelist.HasListBox;
 import mat.client.codelist.ManageCodeListDetailModel;
 import mat.client.codelist.ManageValueSetSearchModel;
+
 import mat.client.codelist.service.SaveUpdateCodeListResult;
 import mat.dao.AuthorDAO;
 import mat.dao.CategoryDAO;
@@ -56,6 +57,7 @@ import mat.server.service.CodeListNotUniqueException;
 import mat.server.service.CodeListOidNotUniqueException;
 import mat.server.service.CodeListService;
 import mat.server.service.InvalidLastModifiedDateException;
+import mat.server.service.UserService;
 import mat.server.service.ValueSetLastModifiedDateNotUniqueException;
 import mat.shared.ConstantMessages;
 import mat.shared.DateStringValidator;
@@ -1149,4 +1151,25 @@ public class ManageCodeListServiceImpl implements CodeListService {
 		model.setResultsTotal(1);
 		return model;
 	}
+	
+	@Override
+	public void transferOwnerShipToUser(List<String> list, String toEmail){
+		
+		User userTo = userDAO.findByEmail(toEmail);
+		
+		for(int i=0;i<list.size();i++){
+			ListObject codeList = listObjectDAO.find(list.get(i));
+			List <ListObject> allCodes = (List<ListObject>) listObjectDAO.getListObject(codeList.getOid());
+			for(int j =0;j<allCodes.size();j++){
+				String additionalInfo = "Value Set Owner transferred from "+allCodes.get(j).getObjectOwner().getEmailAddress()+" to "+ toEmail;
+				allCodes.get(j).setObjectOwner(userTo);
+				listObjectDAO.save(allCodes.get(j));
+				codeListAuditLogDAO.recordCodeListEvent(allCodes.get(j),"Value Set Ownership Changed " ,additionalInfo);
+				additionalInfo = "";
+			}
+			
+		}
+		
+	}
+	
 }

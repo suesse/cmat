@@ -14,7 +14,9 @@ import mat.client.clause.ClauseService;
 import mat.client.clause.ClauseServiceAsync;
 import mat.client.clause.QDSCodeListSearchView;
 import mat.client.clause.view.DiagramViewImpl;
+import mat.client.codelist.AdminManageCodeListSearchModel;
 import mat.client.codelist.ListBoxCodeProvider;
+import mat.client.codelist.ManageCodeListSearchView;
 import mat.client.codelist.service.CodeListService;
 import mat.client.codelist.service.CodeListServiceAsync;
 import mat.client.event.ForgottenPasswordEvent;
@@ -26,6 +28,8 @@ import mat.client.login.service.LoginServiceAsync;
 import mat.client.login.service.SessionManagementService;
 import mat.client.login.service.SessionManagementServiceAsync;
 import mat.client.measure.ManageMeasureDetailModel;
+import mat.client.measure.ManageMeasureSearchModel;
+import mat.client.measure.ManageMeasureSearchView;
 import mat.client.measure.service.MeasureService;
 import mat.client.measure.service.MeasureServiceAsync;
 import mat.client.measurepackage.service.PackageService;
@@ -106,7 +110,21 @@ public class MatContext implements IsSerializable {
 	private ErrorMessageDisplay errorMessage1;
 	private ErrorMessageDisplay errorMessage2;
 	
+	private ManageMeasureSearchView manageMeasureSearchView;
+	
+	private ManageMeasureSearchModel manageMeasureSearchModel;
+	
+	private ManageCodeListSearchView manageCodeListSearchView;
+	
+	private AdminManageCodeListSearchModel manageCodeListSearchModel;
+	
+	
 	private SynchronizationDelegate synchronizationDelegate = new SynchronizationDelegate();
+	
+	private int errorTabIndex;
+	
+	private boolean isErrorTab;
+	
 	
 	public void clearDVIMessages(){
 		if(dviWindow != null){
@@ -674,6 +692,107 @@ public class MatContext implements IsSerializable {
 				(current.getTime() - lastSignIn.getTime() < (3*60*1000)) : 
 					false;
 		return alreadySignedIn;
+	}
+
+
+	/**
+	 * @return the manageMeasureSearchView
+	 */
+	public ManageMeasureSearchView getManageMeasureSearchView() {
+		return manageMeasureSearchView;
+	}
+
+
+	/**
+	 * @param manageMeasureSearchView the manageMeasureSearchView to set
+	 */
+	public void setManageMeasureSearchView(
+			ManageMeasureSearchView manageMeasureSearchView) {
+		this.manageMeasureSearchView = manageMeasureSearchView;
+	}
+
+
+	/**
+	 * @return the manageMeasureSearchModel
+	 */
+	public ManageMeasureSearchModel getManageMeasureSearchModel() {
+		return manageMeasureSearchModel;
+	}
+
+
+	/**
+	 * @param manageMeasureSearchModel the manageMeasureSearchModel to set
+	 */
+	public void setManageMeasureSearchModel(
+			ManageMeasureSearchModel manageMeasureSearchModel) {
+		this.manageMeasureSearchModel = manageMeasureSearchModel;
+	}
+
+
+
+
+
+	/**
+	 * @return the isErrorTab
+	 */
+	public boolean isErrorTab() {
+		return isErrorTab;
+	}
+
+
+	/**
+	 * @param isErrorTab the isErrorTab to set
+	 */
+	public void setErrorTab(boolean isErrorTab) {
+		this.isErrorTab = isErrorTab;
+	}
+
+
+	/**
+	 * @return the errorTabIndex
+	 */
+	public int getErrorTabIndex() {
+		return errorTabIndex;
+	}
+
+
+	/**
+	 * @param errorTabIndex the errorTabIndex to set
+	 */
+	public void setErrorTabIndex(int errorTabIndex) {
+		this.errorTabIndex = errorTabIndex;
+	}
+
+
+	/**
+	 * @param manageCodeListSearchView the manageCodeListSearchView to set
+	 */
+	public void setManageCodeListSearchView(ManageCodeListSearchView manageCodeListSearchView) {
+		this.manageCodeListSearchView = manageCodeListSearchView;
+	}
+
+
+	/**
+	 * @return the manageCodeListSearchView
+	 */
+	public ManageCodeListSearchView getManageCodeListSearchView() {
+		return manageCodeListSearchView;
+	}
+
+
+	/**
+	 * @param manageCodeListSearcModel the manageCodeListSearcModel to set
+	 */
+	public void setManageCodeListSearcModel(AdminManageCodeListSearchModel manageCodeListSearchModel) {
+		this.manageCodeListSearchModel =  manageCodeListSearchModel;
+	}
+
+
+	/**
+	 * @return the manageCodeListSearcModel
+	 */
+	public AdminManageCodeListSearchModel getManageCodeListSearchModel() {
+		return manageCodeListSearchModel;
 	}
 	
 }

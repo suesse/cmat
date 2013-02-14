@@ -21,5 +21,7 @@ public interface UserDAO extends IDAO<User, String> {
 	public void setUserSignOutDate(String userid);
 	public User findByLoginId(String loginId);
 	public boolean findUniqueLoginId(String loginId);
+	public List<User> searchNonAdminUsers(String orgId, int i, int numResults);
+	public int countSearchResultsNonAdmin(String text);
 	
 }

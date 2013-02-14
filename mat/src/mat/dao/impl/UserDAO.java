@@ -92,6 +92,17 @@ public class UserDAO extends GenericDAO<User, String> implements mat.dao.UserDAO
 		criteria.add(Restrictions.ne("id", "Admin"));
 		return criteria;
 	}
+	
+	private Criteria createSearchCriteriaNonAdminUser(String text) {
+		
+		Session session = getSessionFactory().getCurrentSession();
+		Criteria criteria = session.createCriteria(User.class);
+		criteria.add(Restrictions.or(Restrictions.ilike("firstName",  "%" + text + "%"),
+									Restrictions.ilike("lastName",  "%" + text + "%")));
+		criteria.add(Restrictions.ne("securityRole.id", "1"));
+		return criteria;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public List<User> searchForUsersByName(String name, int startIndex, int numResults) {
 		Criteria criteria = createSearchCriteria(name);
@@ -103,8 +114,27 @@ public class UserDAO extends GenericDAO<User, String> implements mat.dao.UserDAO
 		return criteria.list();
 		
 	}
+	
+	@SuppressWarnings("unchecked")
+	public List<User> searchNonAdminUsers(String name, int startIndex, int numResults) {
+		Criteria criteria = createSearchCriteriaNonAdminUser(name);
+		criteria.addOrder(Order.asc("lastName"));
+		criteria.setFirstResult(startIndex);
+		if(numResults > 0) {
+			criteria.setMaxResults(numResults);
+		}
+		return criteria.list();
+		
+	}
+	
 	public int countSearchResults(String text) {
 		Criteria criteria = createSearchCriteria(text);
+		criteria.setProjection(Projections.rowCount());
+		return ((Long)criteria.uniqueResult()).intValue();
+	}
+	
+	public int countSearchResultsNonAdmin(String text) {
+		Criteria criteria = createSearchCriteriaNonAdminUser(text);
 		criteria.setProjection(Projections.rowCount());
 		return ((Long)criteria.uniqueResult()).intValue();
 	}

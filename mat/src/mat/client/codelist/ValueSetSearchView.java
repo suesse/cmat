@@ -5,12 +5,15 @@ package mat.client.codelist;
 
 import mat.client.ImageResources;
 import mat.client.shared.HorizontalFlowPanel;
+import mat.client.shared.MatContext;
 import mat.client.shared.search.SearchResults;
 import mat.client.shared.search.SearchView;
+import mat.client.util.ClientConstants;
 import mat.model.CodeListSearchDTO;
 
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.user.client.ui.SimplePanel;
 
@@ -55,9 +58,10 @@ public class ValueSetSearchView extends SearchView<CodeListSearchDTO>{
 					String innerText = results.getValue(i, j).getElement().getInnerText();
 					innerText = addSpaces(innerText, 27);
 					
-			    	Anchor a = new Anchor(innerText);
+					Anchor a = new Anchor(innerText);
 					final int rowIndex = i;
 					addClickHandler(a, results, rowIndex);
+					
 					
 					Panel holder = new HorizontalFlowPanel();
 					SimplePanel innerPanel = new SimplePanel();
@@ -89,7 +93,7 @@ public class ValueSetSearchView extends SearchView<CodeListSearchDTO>{
 		}
 	}
 	
-	private String addSpaces(String in, int frequency){
+	public String addSpaces(String in, int frequency){
 		
 		if(in.length() <= frequency)
 			return in;
@@ -118,7 +122,7 @@ public class ValueSetSearchView extends SearchView<CodeListSearchDTO>{
 	 * @param text value to be assigned to the alt and title attributes of the return image
 	 * @return
 	 */
-	private Image createImage(final int rowIndex,final SearchResults results, String text){
+	public Image createImage(final int rowIndex,final SearchResults results, String text){
 		Image image = new Image(ImageResources.INSTANCE.application_cascade());
 		image.setTitle(text);
 		image.getElement().setAttribute("alt", text);

@@ -23,6 +23,7 @@ import mat.client.measure.ManageMeasurePresenter;
 import mat.client.measure.ManageMeasureSearchView;
 import mat.client.measure.ManageMeasureShareView;
 import mat.client.measure.ManageMeasureVersionView;
+import mat.client.measure.TransferMeasureOwnershipView;
 import mat.client.myAccount.ChangePasswordPresenter;
 import mat.client.myAccount.ChangePasswordView;
 import mat.client.myAccount.MyAccountPresenter;
@@ -250,22 +251,35 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 			measureComposer= buildMeasureComposer();
 			title = ClientConstants.TITLE_MEASURE_COMPOSER;	
 			tabIndex = mainTabLayout.addPresenter(measureComposer, mainTabLayout.fmt.normalTitle(title));
+			
+			title = ClientConstants.TITLE_MY_ACCOUNT;	
+			tabIndex = mainTabLayout.addPresenter(buildMyAccountWidget(), mainTabLayout.fmt.normalTitle(title));
 		}
 		else if(currentUserRole.equalsIgnoreCase(ClientConstants.ADMINISTRATOR))
 		{
 			adminPresenter = buildAdminPresenter();
-			
 			title = ClientConstants.TITLE_ADMIN;	
-			
 			tabIndex = mainTabLayout.addPresenter(adminPresenter, mainTabLayout.fmt.normalTitle(title));
+			
+			title = ClientConstants.TITLE_MY_ACCOUNT;	
+			tabIndex = mainTabLayout.addPresenter(buildMyAccountWidget(), mainTabLayout.fmt.normalTitle(title));
+			
+			codeListController = new CodeListController(currentUserRole);
+			title = ClientConstants.TITLE_VALUE_SET_CHANGE_OWNERSHIP;	
+			tabIndex = mainTabLayout.addPresenter(codeListController, mainTabLayout.fmt.normalTitle(title));
+		
+			measureLibrary = buildMeasureLibraryWidget(); 
+			title = ClientConstants.TITLE_MEASURE_LIB_CHANGE_OWNERSHIP;	
+			tabIndex = mainTabLayout.addPresenter(measureLibrary, mainTabLayout.fmt.normalTitle(title));
+			
+			
 		}
 		else {
 			Window.alert("Unrecognized user role " + currentUserRole);
 			MatContext.get().getEventBus().fireEvent(new LogoffEvent());
 		}
 			
-		title = ClientConstants.TITLE_MY_ACCOUNT;	
-		tabIndex = mainTabLayout.addPresenter(buildMyAccountWidget(), mainTabLayout.fmt.normalTitle(title));
+		
 	
 		mainTabLayout.setHeight("100%");
 		
@@ -342,7 +356,7 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 				MatContext.get().stopUserLockUpdate();
 				//US154 SIGN_OUT_EVENT
 				MatContext.get().recordTransactionEvent(null, null, "SIGN_OUT_EVENT", null, 1);
-				mainTabLayout.close();
+//				mainTabLayout.close(); // Removing auto save for measure details and clause workspace 01/2013
 				Command isSavingCmd = new Command() {
 			    	   public void execute() {
 			    		   //CallSignout only if the clauses and measureDetails are not in the process of saving or 
@@ -373,11 +387,11 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 			@Override
 			public void onTimedOut(TimedOutEvent event) {
 				if(measureComposer != null){//This if check will prevent admin user getting null pointer exception while timing out
-					mainTabLayout.close();
+//					mainTabLayout.close(); // User Story change - Removing AutoSave when Timeout.
 					//Note: This will select the measureLibrary tab just before the time out Warning.
 					//mainTabLayout.selectTab(measureLibrary);
-					mainTabLayout.selectTab(codeListController);
-					
+//					mainTabLayout.selectTab(codeListController);//User Story change - Removing AutoSave when Timeout.
+					Mat.focusSkipLists("MainContent");
 				}
 			}
 		});
@@ -390,8 +404,8 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 					//US212 no longer update user sign in time and record user sign out time
 					MatContext.get().stopUserLockUpdate();
 					MatContext.get().recordTransactionEvent(null, null, "WINDOW_CLOSE_EVENT", null, ConstantMessages.DB_LOG);
-					if(MatContext.get().getCurrentMeasureInfo()!= null)
-					    mainTabLayout.close();
+//					if(MatContext.get().getCurrentMeasureInfo()!= null)
+//					    mainTabLayout.close(); // Removing auto save for measure details and clause workspace 01/2013
 					callSignOutWithoutRedirect();
 				}
 			}
@@ -484,6 +498,7 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 		ManageMeasureDetailView measureDetailView = new ManageMeasureDetailView();
 		ManageMeasureVersionView versionView = new ManageMeasureVersionView();
 		ManageMeasureDraftView measureDraftView = new ManageMeasureDraftView();
+		TransferMeasureOwnershipView transferOS = new TransferMeasureOwnershipView();
 		ManageMeasureShareView measureShareView = new ManageMeasureShareView();
 		ManageMeasureHistoryView historyView = new ManageMeasureHistoryView();
 		ManageMeasureExportView measureExportView;
@@ -494,7 +509,7 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 		}
 		ManageMeasurePresenter measurePresenter = 
 			new ManageMeasurePresenter(measureSearchView, measureDetailView, measureShareView, measureExportView,
-					historyView,versionView,measureDraftView);
+					historyView,versionView,measureDraftView,transferOS);
 		
 		return measurePresenter;
 		

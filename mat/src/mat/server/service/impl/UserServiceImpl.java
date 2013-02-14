@@ -238,10 +238,31 @@ public class UserServiceImpl implements UserService {
 		}
 		return userDAO.searchForUsersByName(orgId, startIndex - 1, numResults);
 	}
+	
+	@Override
+	public List<User> searchNonAdminUsers(String orgId, int startIndex, int numResults) {
+		if(orgId == null) {
+			orgId = "";
+		}
+		return userDAO.searchNonAdminUsers(orgId, startIndex - 1, numResults);
+	}
+	
+	@Override
+	public User findByEmailID(String emailId) {
+		
+		return userDAO.findByEmail(emailId);
+	}
+	
 	@Override
 	public int countSearchResults(String text) {
 		return userDAO.countSearchResults(text);
 	}
+	
+	@Override
+	public int countSearchResultsNonAdmin(String text) {
+		return userDAO.countSearchResultsNonAdmin(text);
+	}
+	
 	@Override
 	public User getById(String id) {
 		return userDAO.find(id);
@@ -521,5 +542,7 @@ public class UserServiceImpl implements UserService {
 	public String getUserGuideUrl() {
 		return userGuideUrl;
 	}
+
+	
 	
 }

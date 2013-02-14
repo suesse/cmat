@@ -3,6 +3,7 @@ package mat.client.measure;
 import java.sql.Timestamp;
 
 import mat.client.ImageResources;
+import mat.client.measure.metadata.CustomCheckBox;
 import mat.client.shared.FocusableImageButton;
 import mat.client.shared.search.SearchResults;
 
@@ -10,28 +11,29 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 
 class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchModel.Result> {
 	
-	private static String[] headers = new String[] { "Measure Name", "Version", "Finalized Date", "Status", "History" ,"Edit","Share", "Clone", "Export"};
-	private static String[] widths = new String[] { "35%", "16%", "16", "8%", "5%","5%", "5%", "5%", "5%" };
+	private static String[] headers = new String[] { "Measure Name", "Version", "Finalized Date", "Status", "History" ,"Edit","Share", "Clone", "ExportClear"};
+	private static String[] widths = new String[] { "35%", "16%", "16%", "8%", "5%","5%", "5%", "5%", "5%", "12%" };
 
 	public static interface Observer {
 		public void onEditClicked(ManageMeasureSearchModel.Result result);
 		public void onCloneClicked(ManageMeasureSearchModel.Result result);
 		public void onShareClicked(ManageMeasureSearchModel.Result result);
 		public void onExportClicked(ManageMeasureSearchModel.Result result);
-		public void onHistoryClicked(ManageMeasureSearchModel.Result result);
-		
+		public void onHistoryClicked(ManageMeasureSearchModel.Result result);		
+		public void onExportSelectedClicked(CustomCheckBox checkBox);
 	}
 		
 	private ManageMeasureSearchModel data = new ManageMeasureSearchModel();
 	private Observer observer;
 	private ClickHandler clickHandler = buildClickHandler();
-	
+
 	private ManageMeasureSearchModel.Result getResultForId(String id) {
 		for(int i = 0; i < data.getNumberOfRows(); i++) {
 			if(id.equals(data.getKey(i))) {
@@ -47,6 +49,7 @@ class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchMo
 	}
 	public void setData(ManageMeasureSearchModel data) {
 		this.data = data;
+		
 	}
 	
 	
@@ -131,8 +134,10 @@ class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchMo
 				value = getImage("clone", ImageResources.INSTANCE.g_page_copy(), data.get(row).getId());
 			break;
 		case 8:
-			if(data.get(row).isExportable())
-				value = getImage("export", ImageResources.INSTANCE.g_package_go(), data.get(row).getId());
+			if(data.get(row).isExportable()){
+//				value = getImage("export", ImageResources.INSTANCE.g_package_go(), data.get(row).getId());
+				value = getImageAndCheckBox("export", ImageResources.INSTANCE.g_package_go(), data.get(row).getId());
+			}
 			break;
 		default: 
 			value = new Label();
@@ -150,6 +155,26 @@ class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchMo
 		holder.add(image);
 		return holder;
 	}
+	
+	
+	private Widget getImageAndCheckBox(String action, ImageResource url, String key){
+		HorizontalPanel hPanel = new HorizontalPanel();
+		hPanel.setStyleName("searchTableCenteredHolder");
+		FocusableImageButton image = new FocusableImageButton(url,action);
+		image.setStylePrimaryName("measureSearchResultIcon rightAligned");
+		setId(image, action, key);
+		addListener(image);
+		hPanel.add(image);
+				
+		CustomCheckBox checkBox = new CustomCheckBox("bulkExport", false);	
+		checkBox.setStyleName("centerAligned");
+		checkBox.setFormValue(key);
+		hPanel.add(checkBox);	
+		checkBox.getElement().setId("bulkExport_" + key);
+		checkBox.addClickHandler(clickHandler);
+		return hPanel;
+	}
+	
 	
 	private void addListener(FocusableImageButton image) {
 		image.addClickHandler(clickHandler);
@@ -185,6 +210,8 @@ class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchMo
 					}
 					else if("history".equals(action)){
 						observer.onHistoryClicked(result);
+					}else if("bulkExport".equals(action)){
+						observer.onExportSelectedClicked((CustomCheckBox)event.getSource());
 					}
 				}
 			}
@@ -235,6 +262,4 @@ class MeasureSearchResultsAdapter implements SearchResults<ManageMeasureSearchMo
 		String tsStr = (ts.getMonth()+1)+"/"+ts.getDate()+"/"+(ts.getYear()+1900)+" "+hoursStr+":"+mins+" "+ap;
 		return tsStr;
 	}
-
-	
 }

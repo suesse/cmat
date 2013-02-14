@@ -859,4 +859,37 @@ public class MessageDelegate {
 	public String getGenericErrorMessage(){
 		return GENERIC_ERROR_MESSAGE;
 	}
+	
+	private final String MEASURE_SELECTION_ERROR = "Please select at least one measure";
+	public String getMeasureSelectionError(){
+		return MEASURE_SELECTION_ERROR;
+	}
+	
+	private final String TRANSFER_CHECKBOX_ERROR = "Please select at least one Value Set to transfer ownership.";
+	public String getTransferCheckBoxError(){
+		return TRANSFER_CHECKBOX_ERROR;
+	}
+	
+	private final String TRANSFER_CHECKBOX_ERROR_MEASURE = "Please select at least one Measure to transfer ownership.";
+	public String getTransferCheckBoxErrorMeasure(){
+		return TRANSFER_CHECKBOX_ERROR_MEASURE;
+	}
+	
+	private final String TRANSFER_OWNERSHIP_SUCCESS = "Ownership successfully transferred to ";
+	public String getTransferOwnershipSuccess(){
+		return TRANSFER_OWNERSHIP_SUCCESS;
+	}
+	private final String UNSAVED_CHANGES_IN_CANVAS_CLONE="You have unsaved changes. Please save your changes and then Clone.";
+	public String getUnsavedChangesinCanvasClone(){
+		return UNSAVED_CHANGES_IN_CANVAS_CLONE;
+	}
+	
+	private final String SAVE_ERROR_MSG = "You have unsaved changes that will be discarded if you continue. " +
+	"Do you want to continue without saving?";
+	/**
+	 * @return the sAVE_ERROR_MSG
+	 */
+	public String getSaveErrorMsg() {
+		return SAVE_ERROR_MSG;
+	}
 }

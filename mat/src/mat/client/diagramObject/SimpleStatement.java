@@ -2,6 +2,7 @@ package mat.client.diagramObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,9 +18,7 @@ import mat.client.shared.MATRadioButton;
 import mat.client.shared.MatContext;
 import mat.client.shared.MessageDelegate;
 import mat.shared.ConstantMessages;
-import mat.shared.IllegalRecursionException;
 import mat.shared.StringUtility;
-import mat.shared.TopologicalSort;
 import mat.shared.diagramObject.InProgress_Complete;
 import mat.shared.model.StatementTerm;
 import mat.shared.model.StatementTerm.Operator;
@@ -169,6 +168,8 @@ public class SimpleStatement extends DiagramObject {
 	public List<String> getErrorMsgList(){
 		return errorMsgList;
 	}
+	
+	public SimpleStatement(){}
 	
 	public SimpleStatement(AppController appController) {	
 		super();
@@ -359,7 +360,7 @@ public class SimpleStatement extends DiagramObject {
 			phrase.setAppController(appController);
 		this.qdmElementsWithAttrib = elements;
 		this.qdmElements = stripAttrib(this.qdmElementsWithAttrib);
-		this.phraseElements = getMeasurePhraseList();
+		this.phraseElements = getMeasurePhraseList();//
 		this.okClickHandler = okClickHandler;
 		this.deleteClickHandler = deleteClickHandler;
 		this.cancelClickHandler = cancelClickHandler;
@@ -434,56 +435,192 @@ public class SimpleStatement extends DiagramObject {
 		setupNameTextBox(top, true);
 		return grid;
 	}
-
+	
 	private Set<String> getMeasurePhraseList() {
 		MeasurePhrases measurePhrases = appController.getMeasurePhrases().clone();
 		List<String> phraseNames = appController.getMeasurePhraseList();
 		Set<String> availablePhrases = new LinkedHashSet<String>();
-
-		// need to use phrase1's text for recursion testing; save it and restore later
-		String phrase1Text = phrase1.text; 
-
-		for (String name : phraseNames) {
-			try {
-				SimpleStatement test = new SimpleStatement(appController);
-				test.setIdentity(this.identity);
-				test.setDescription(this.description);
-				test.phrase1 = new Phrase(appController);
-				phrase1.setText(name);	
-
-				measurePhrases.put(RECURSION_TEST_STATEMENT, test);
-				List<String>testNames = new ArrayList<String>();
-				testNames.addAll(phraseNames);
-				testNames.add("!__TEST__!");
-
-				TopologicalSort g = new TopologicalSort(measurePhrases, phraseNames);
-				g.topologicalSort();
-				availablePhrases.add(name);
+		String currentPhraseName = this.identity;
+		for(String name:phraseNames){			
+//			System.out.println("looking for cycle for:"+this.identity);
+//			System.out.println("evaluating:"+name);
+			if(name.equals(this.identity)){
+				continue;
 			}
-			catch (IllegalRecursionException re) {
-				re.printStackTrace();
-			}	
-			catch (Exception e) {
-				e.printStackTrace();
+			SimpleStatement measurePhrase = (SimpleStatement)measurePhrases.getItem(name);
+			
+//			System.out.println(name + " has measurePhrase.getPhrase1Text():"+measurePhrase.getPhrase1Text());
+			if(null != measurePhrase.getPhrase1Text() && measurePhrase.getPhrase1Text().equals(currentPhraseName)){
+				continue;
+			}else if(measurePhrase.getPhrase2() != null && measurePhrase.getPhrase2Text() != null && measurePhrase.getPhrase2Text().equals(currentPhraseName)){
+				continue;
+			}
+			boolean isContinue=false;
+			for (Phrase additionalPhrase : measurePhrase.getAdditionalPhraseList()) {
+				if(additionalPhrase.getText().equals(currentPhraseName)){
+					isContinue=true;
+					break;
+				}
+			}
+			if(isContinue){
+				continue;
+			}
+			availablePhrases.add(measurePhrase.getIdentity());
+		}
+		
+		//Find indirect cycles
+		Set<String> unavailablePhrases = new HashSet<String>();
+		for(String availPhrase:availablePhrases){			
+			SimpleStatement stmt = (SimpleStatement)appController.getMeasurePhrases().getItem(availPhrase);
+			Set<String> connections = stmt.getConnectedPhrases(currentPhraseName);
+			if(connections.contains(currentPhraseName)){
+				unavailablePhrases.add(availPhrase);
 			}
 		}
-
+		availablePhrases.removeAll(unavailablePhrases);
+		
 		if (availablePhrases.size() > 0) {
 			Object[] objArray = availablePhrases.toArray();
 			String[] strArray = new String[objArray.length];
 			int index = 0;
-			for (Object obj : objArray)
+			for (Object obj : objArray){
 				strArray[index++] = (String)obj;
+			}
 			Arrays.sort(strArray);
 			availablePhrases.addAll(Arrays.asList(strArray));
-//			availablePhrases.add("-----");	
 		}
-//		availablePhrases.addAll(elements);
-
-		phrase1.setText(phrase1Text);
+		
 		return availablePhrases;
 	}
+	
+	/**
+	 * This will give you all the direct/indirect connections to other Phrases.
+	 */
+	private Set<String> getConnectedPhrases(String mainPhraseName){
+		Set<String> connectedPhrases = new LinkedHashSet<String>();
+		
+		if(appController.isMeasurePhrase(this.getPhrase1Text())){
+			connectedPhrases.add(this.getPhrase1Text());
+		}
+		
+		if(this.phrase2 != null && appController.isMeasurePhrase(this.getPhrase2Text())){
+			if(this.getPhrase2Text() != null && this.getPhrase2Text().trim().length() > 0){
+				connectedPhrases.add(this.getPhrase2Text());
+			}
+		}
+		
+		for (Phrase additionalPhrase : this.getAdditionalPhraseList()) {
+			if(appController.isMeasurePhrase(additionalPhrase.getText())){
+				connectedPhrases.add(additionalPhrase.getText());
+			}
+		}
+		
+		if(connectedPhrases.size() > 0 && (!connectedPhrases.contains(mainPhraseName))){
+			for(String phrase:connectedPhrases){
+				SimpleStatement stmt = (SimpleStatement)appController.getMeasurePhrases().getItem(phrase);
+				Set<String> connections = stmt.getConnectedPhrases(mainPhraseName);
+				if(connections.contains(mainPhraseName)){
+					connectedPhrases.add(mainPhraseName);
+					break;
+				}
+			}
+		}
+		return connectedPhrases;
+	}
+	
+	/*private Set<String> getMeasurePhraseList_old() {
+		  long startTime = System.currentTimeMillis();
+		  MeasurePhrases measurePhrases = appController.getMeasurePhrases().clone();
+		  List<String> phraseNames = appController.getMeasurePhraseList();
+		  Set<String> availablePhrases = new LinkedHashSet<String>();
+		 
+		  // need to use phrase1's text for recursion testing; save it and restore later
+		  String phrase1Text = phrase1.text; 
+		  
+		  SimpleStatement test = new SimpleStatement(appController);
+		  test.setIdentity(this.identity);
+		  test.setDescription(this.description);
+		  test.phrase1 = new Phrase(appController);
+		  
+//		  long t1=0;
+//		  long t0=0;
+		  int i=0;
+		  TopologicalSort g = null;
+		  List<Vertex> vertexes = new ArrayList<Vertex>();
+		  for(String nam:phraseNames){
+			  vertexes.add(new Vertex(nam));
+		  }
+		  	  
+//		  long start = System.currentTimeMillis();
+		  
+		  for (String name : phraseNames) {
+			//phrase1.setText(name);
+			phrase1.text = name;
+			measurePhrases.put(RECURSION_TEST_STATEMENT, test);
+			
+//			long s1 = System.currentTimeMillis();
+			if(i==0){
+				g = new TopologicalSort(measurePhrases, phraseNames);
+			}else{
+				Vertex vertexList[] = new Vertex[phraseNames.size()];
+				vertexes.toArray(vertexList);
+//		    	int[][] matrix = new int[phraseNames.size()][phraseNames.size()];
+								  
+//		    	Although the declaration of the 2D array above is enough to initialize the array
+//		    	with 0's, I am not sure how this would play when GWT converts this into Javascript.
+//		    	So writing a for in for to initialize this with 0's.
+//		    	for(int row=0;row<phraseNames.size();row++){
+//				  vertexList[row] = new Vertex(phraseNames.get(row));
+//				  for(int col=0;col<phraseNames.size();col++){
+//					  matrix[row][col] = 0;
+//				  }
+//				}
+//				g.setMatrix(matrix);
+				g.setNumVerts(phraseNames.size());
+		    	g.setSortedArray(new String[phraseNames.size()]);
+		    	g.resetMatrix();
+		    	g.setVertexList(vertexList);
+		    	g.setMeasurePhrases(measurePhrases);
+		    	g.addEdges();
+		    }
+//			g = new TopologicalSort(measurePhrases, phraseNames);
+		    int ret = g.topologicalSort();
+//		    long e1 = System.currentTimeMillis();
+//		    t1 += e1-s1;
+//		    if(i == 0){
+//		    	t0 = t1;
+//		    }
+		    if(ret > 0){
+		    	availablePhrases.add(name);
+		    }
+		    i++;
+		  }
+		  
+//		  long end = System.currentTimeMillis();
+//		  Window.alert("Time taken:"+(end-start)+" and topo sort took:"+t1);
+		 
+//		  if (availablePhrases.size() > 0) {
+//			   Object[] objArray = availablePhrases.toArray();
+//			   String[] strArray = new String[objArray.length];
+//			   int index = 0;
+//			   for (Object obj : objArray){
+//			    strArray[index++] = (String)obj;
+//			   }
+//			   Arrays.sort(strArray);
+//			   availablePhrases.addAll(Arrays.asList(strArray));
+//		  }
+		  
+		  if (availablePhrases.size() > 0) {
+			 Collections.sort(new ArrayList<String>(availablePhrases));
+		  }
 
+		 
+		  phrase1.setText(phrase1Text);
+		  long endTime = System.currentTimeMillis();
+		  System.out.println("total time for simpleStatement.getMeasurePhraseList():"+(endTime - startTime));
+		  return availablePhrases;
+		 }*/
+		 
 	protected void setupNameTextBox(String top, boolean objectExists) {
 		final boolean isNewPhrase = ((top == null || top.equalsIgnoreCase(this.EMPTY)) && !objectExists);
 		if (isNewPhrase)
@@ -1137,8 +1274,11 @@ public class SimpleStatement extends DiagramObject {
 
 		inProgressCompleteListBox = new ListBox();
 		inProgressCompleteListBox.addFocusHandler(new SimpleStatementFocusHandler());
-		descriptionPanel.add(LabelBuilder.buildRequiredLabel(inProgressCompleteListBox, "Status"));
+		/*
+		 * MAT-286 - Removing Status Field from Measure Phrase. 01/2013		
+  		descriptionPanel.add(LabelBuilder.buildRequiredLabel(inProgressCompleteListBox, "Status"));
 		addListBox(descriptionPanel, inProgressCompleteListBox, statusArray);
+		 */
 		inProgressCompleteListBox.setSelectedIndex(1);//default select inProgress for New Phrase.
 		inProgressCompleteListBox.setEnabled(view.isEditable());
 		grid.setWidget(DESCRIPTION_PANEL_ROW, DESCRIPTION_PANEL_COL, descriptionPanel);

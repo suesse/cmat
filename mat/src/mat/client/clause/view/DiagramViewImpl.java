@@ -163,6 +163,11 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiField HorizontalPanel buttonHolder;
 	@UiField VerticalPanel saveHolder;
 	@UiField SimplePanel messageHolder;
+	public @UiField HorizontalPanel saveErrorMessageHolder;
+
+	public HorizontalPanel getSaveErrorMessageHolder() {
+		return saveErrorMessageHolder;
+	}
 
 	@UiField VerticalPanel libraryVerticalPanel;
 	MatTabLayoutPanel libraryTabPanel;
@@ -235,7 +240,11 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiField Button attributeEditorCancelButton2;
 
 
-	Button saveButton = new Button("Save");
+	public Button saveButton = new Button("Save");
+	public Button getSaveButton() {
+		return saveButton;
+	}
+
 	@UiField VerticalPanel userDefinedPastedCriterionPanel;
 	@UiField Label userDefinedPastedCriterionCaption;
 	@UiField TextBox userDefinedPastedCriterionTextBox;
@@ -403,7 +412,8 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 				if (!MatContext.get().getSynchronizationDelegate().isSavingClauses()){
 					clearPropEditMessages();
 					if (appController.isLoaded()) {
-						appController.saveMainPhrases();
+						//Auto Save Commented for Canvas Sub Tabs
+						//appController.saveMainPhrases();
 					} else {
 						MatContext.get().getSynchronizationDelegate().setSavingClauses(false);
 					}
@@ -468,6 +478,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			@Override
 			public void onEvent(GwtEvent event) {
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				showTextView();
 			}
 		});
@@ -476,6 +487,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			@Override
 			public void onEvent(GwtEvent event) {
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				showCanvasView();
 			}
 		});
@@ -492,6 +504,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			@Override
 			public void onEvent(GwtEvent event) {
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				if (!appController.deleteDiagramObject(currentCriterion, currentDiagramObject))
 					System.out.println("Unable to delete!");
 				currentDiagramObject = null;
@@ -506,6 +519,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			@Override
 			public void onEvent(GwtEvent arg0) {
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				Criterion criterion = (Criterion)currentDiagramObject;
 				if (!appController.deleteCriterion(currentCriterion, currentDiagramObject))
 					System.out.println("Unable to delete!");
@@ -574,6 +588,8 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		// TODO perform dirty check before saving 
 		// even consider showing the saved message whether dirty or not
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
+		//Auto Save Commented for Canvas Sub Tabs
 		appController.saveMainPhrases();
 		Command waitForSave = new Command(){
 			@Override
@@ -783,8 +799,6 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			break;
 		}
 		setLibraryStyle();
-		
-
 	}
 
 	private void setLibraryStyle() {
@@ -883,6 +897,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			Button criterionButton, Button addPhraseButton,
 			Button insertPhraseButton, Button deleteButton) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		showOrHideToolbars();
 		caption = "Text View"; //Default value;
 		//drive off of tree depth rather than complicated string and class checking
@@ -1025,6 +1040,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	protected void handlePropertyGrid(final DiagramObject diagramObject, PROPERTY_GRID_STATE propertyGridState) {
 		List<String> elements = new ArrayList<String>();
         MatContext.get().clearDVIMessages();
+        appController.getSaveErrorMessages().clear();
 		if (diagramObject instanceof Qdsel || diagramObject instanceof SimpleStatement)
 			elements.addAll(Arrays.asList(appController.getQDSElements()));
 		else if (diagramObject instanceof InsertPhrase) {
@@ -1083,6 +1099,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			public void onEvent(GwtEvent event) {
 				saveButton.setEnabled(false);
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				diagramObject.update();
 				Criterion criterion = (Criterion)diagramObject;
 				Criterion newCriterion = (Criterion)(Criterion.clone(criterion));
@@ -1123,6 +1140,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 					saveButton.setEnabled(false);
 					logSavePhraseEvent(diagramObject);
 					MatContext.get().clearDVIMessages();
+					appController.getSaveErrorMessages().clear();
 					diagramObject.update();	
 					Qdsel qdsel = (Qdsel)diagramObject;
 					DiagramObject newQdsel = appController.addDiagramObject(currentCriterion, currentDiagramObject, new Qdsel(qdsel.getIdentity()));
@@ -1143,6 +1161,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 					saveButton.setEnabled(false);
 					logSavePhraseEvent(diagramObject);
 					MatContext.get().clearDVIMessages();
+					appController.getSaveErrorMessages().clear();
 					diagramObject.update();
 					appController.updateDiagramObject(currentCriterion, diagramObject, (Qdsel)currentDiagramObject);
 					hidePropertyEditor();
@@ -1201,6 +1220,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	protected void simpleStatementPropertyEditorClickHandlers(final DiagramObject diagramObject, PROPERTY_GRID_STATE propertyGridState) {
 		
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if (propertyGridState == PROPERTY_GRID_STATE.INSERT) {
 			//saveClickHandler 4
 			saveClickHandler = new MATClickHandler() {
@@ -1210,6 +1230,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 //					saveButton.setEnabled(false);
 					disableLibraries(CLASS_NAME);
 					MatContext.get().clearDVIMessages();
+					appController.getSaveErrorMessages().clear();
 					if (diagramObject.update()) {
 						//check for dup before insert invocation
 						if(!isMeasurePhraseDuplicate(diagramObject.getChangedName())){
@@ -1260,10 +1281,12 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			saveClickHandler = new MATClickHandler() {
 				@Override
 				public void onEvent(GwtEvent event) {
+					doSave(false);
 					//NOTE: saveButton will be enabled when the phrase library is refreshed
 //					saveButton.setEnabled(false);f
 					disableLibraries(CLASS_NAME);
 					MatContext.get().clearDVIMessages();
+					appController.getSaveErrorMessages().clear();
 					if (diagramObject.update()) {
 						logSavePhraseEvent(diagramObject);
 						appController.save(((SimpleStatement)diagramObject).getIdentity());
@@ -1311,6 +1334,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			@Override
 			public void onEvent(GwtEvent event) {
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				retainSavedValue();
 				endSimpleStatementEdit();		
 				start();
@@ -1324,6 +1348,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	
 	private void doCancelClickHandlerBehaviors(){
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		removePropertyEditor();
 		moveFocusToPropertyEditor();
 	}
@@ -1379,6 +1404,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 				saveButton.setEnabled(false);
 				logSavePhraseEvent(diagramObject);
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				diagramObject.update();
 				InsertPhrase insertPhrase = (InsertPhrase)diagramObject;
 				String phrase = insertPhrase.getPhrase();
@@ -1412,6 +1438,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 				saveButton.setEnabled(false);
 				logSavePhraseEvent(diagramObject);
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				diagramObject.update();
 				Rel rel = (Rel)diagramObject;
 				String timing = rel.getTiming();
@@ -1447,6 +1474,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 				saveButton.setEnabled(false);
 				logSavePhraseEvent(diagramObject);
 				MatContext.get().clearDVIMessages();
+				appController.getSaveErrorMessages().clear();
 				diagramObject.update();
 				Conditional conditional = (Conditional)diagramObject;
 				String condition = conditional.getIdentity();
@@ -1478,18 +1506,24 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("cloneButton")
 	public void onCloneButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
-			int selected = clauseLibraryListBox.getSelectedIndex();
-			if (selected >= 0) {
-				String text = clauseLibraryListBox.getItemTitle(selected);
-				String value = clauseLibraryListBox.getValue(selected);
-				clauseToBeCloned = new ClauseLT();
-				clauseToBeCloned.setText(text);
-				clauseToBeCloned.setMeasureID(value);
-			} else {
-				//Write to an error message box.
-				clearPropEditMessages();
-				propEditErrorMessages.setMessage(MatContext.get().getMessageDelegate().getPleaseSelectClauseMessage());
+			if(!appController.isCanvasModified()){
+				int selected = clauseLibraryListBox.getSelectedIndex();
+				if (selected >= 0) {
+					String text = clauseLibraryListBox.getItemTitle(selected);
+					String value = clauseLibraryListBox.getValue(selected);
+					clauseToBeCloned = new ClauseLT();
+					clauseToBeCloned.setText(text);
+					clauseToBeCloned.setMeasureID(value);
+				}else {
+					//Write to an error message box.
+					clearPropEditMessages();
+					propEditErrorMessages.setMessage(MatContext.get().getMessageDelegate().getPleaseSelectClauseMessage());
+				}
+			}else{
+				String msg = MatContext.get().getMessageDelegate().getUnsavedChangesinCanvasClone();
+				appController.getSaveErrorMessages().setMessage(msg);
 			}
 		}
 	}
@@ -1626,12 +1660,14 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("addAttributeButton1")
 	public void onClickAddAttributeButton1(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAddAttributeButton(event);
 	}
 	@UiHandler("addAttributeButton2")
 	public void onClickAddAttributeButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAddAttributeButton(event);
 	}
@@ -1639,12 +1675,14 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("attributeUpdateTypeButton1")
 	public void onClickAttributeUpdateTypeButton1(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeUpdateTypeButton(event);
 	}
 	@UiHandler("attributeUpdateTypeButton2")
 	public void onClickAttributeUpdateTypeButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeUpdateTypeButton(event);
 	}
@@ -1652,12 +1690,14 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("attributeComparisonUpdateButton1")
 	public void onClickAttributeComparisonUpdateButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeComparisonUpdateButton(event);
 	}
 	@UiHandler("attributeComparisonUpdateButton2")
 	public void onClickAttributeComparisonUpdateButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeComparisonUpdateButton(event);
 	}
@@ -1665,12 +1705,14 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("attributeQDSElementUpdateButton1")
 	public void onClickAttributeQDSElementUpdateButton1(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeQDSElementUpdateButton(event);
 	}
 	@UiHandler("attributeQDSElementUpdateButton2")
 	public void onClickAttributeQDSElementUpdateButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			attributeEditor.onClickAttributeQDSElementUpdateButton(event);
 	}
@@ -1678,17 +1720,20 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("attributeEditorSaveButton1")
 	public void onClickAttributeEditorSaveButton1(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			onClickAttributeEditorSaveButton(event);
 	}
 	@UiHandler("attributeEditorSaveButton2")
 	public void onClickAttributeEditorSaveButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			onClickAttributeEditorSaveButton(event);
 	}
 	public void onClickAttributeEditorSaveButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
 			switch (diagramView) {
 			case CANVAS_VIEW:
@@ -1710,17 +1755,20 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("attributeEditorCancelButton1")
 	public void onClickAttributeEditorCanceButton1(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			onClickAttributeEditorCanceButton(event);
 	}
 	@UiHandler("attributeEditorCancelButton2")
 	public void onClickAttributeEditorCanceButton2(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			onClickAttributeEditorCanceButton(event);
 	}	
 	public void onClickAttributeEditorCanceButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
 			switch (diagramView) {
 			case CANVAS_VIEW:
@@ -1922,6 +1970,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	
 	public void onClickQdselButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true))
 			handlePropertyGrid(new Qdsel());
 	}
@@ -1940,6 +1989,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 
 	public void onClickCriterionButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		DiagramObject newCriterionObject = appController.addCriterion(currentCriterion);
 		appController.addConditional(currentCriterion, (Criterion) newCriterionObject);
 		if (diagramView == DIAGRAM_VIEW.CANVAS_VIEW) {
@@ -1955,7 +2005,8 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 				fireAlert(item.getElement());
 			}
 		}
-		appController.saveMainPhrases();
+		//Auto Save Commented for Canvas Sub Tabs
+		//appController.saveMainPhrases();
 	}
 
 	@UiHandler("pasteCloneButton1")
@@ -1966,6 +2017,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 
 	public void onClickPasteCloneButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if (clauseToBeCloned == null) {
 			clearPropEditMessages();
 			propEditErrorMessages.setMessage(MatContext.get().getMessageDelegate().getPleaseSelectClauseMessage());
@@ -1976,11 +2028,38 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			String measureID = clauseToBeCloned.getMeasureID();
 			appController.cloneSystemClause(name, criterionNameToClone, measureID);
 			clauseToBeCloned = null;
-			appController.saveMainPhrases();
+			//Auto Save Commented for Canvas Sub Tabs
+			//appController.saveMainPhrases();
 			moveFocusToPropertyEditor();
 		}
 	}
-
+	
+	/*private void addErrorMessageOnPasteClone(){
+		String msg = "You have unsaved changes. Please save your changes and then Clone.";
+		appController.getSaveErrorMessages().setMessage(msg);
+		List<String> btn = new ArrayList<String>();
+		btn.add("Yes");
+		btn.add("No");
+		appController.getSaveErrorMessages().setMessageWithButtons(msg, btn);
+		ClickHandler clickHandler = new ClickHandler() {
+			@Override
+			public void onClick(ClickEvent event) {
+				SecondaryButton button = (SecondaryButton)event.getSource();
+				if("Yes".equals(button.getText())){
+					appController.getSaveErrorMessages().clear();
+					createCloneOnCanvas();
+				}else if("No".equals(button.getText())){
+					appController.getSaveErrorMessages().clear();
+					saveButton.setFocus(true);
+				}
+			}
+		};
+		for (SecondaryButton secondaryButton : getAppController().getSaveErrorMessages().getButtons()) {
+			secondaryButton.addClickHandler(clickHandler);
+		}
+		
+	}*/
+	
 	@UiHandler("andButton1")
 	public void onClickAndButton1(ClickEvent event) {
 		if(!isLoading(true))
@@ -1989,6 +2068,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	
 	public void onClickAndButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		addConditional("AND");
 	}
 
@@ -2000,11 +2080,13 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		
 	public void onClickOrButton(ClickEvent event) {	
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		addConditional("OR");
 	}
 
 	protected void addConditional(String condition) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if (!appController.canAddConditional(currentDiagramObject)) {
 			propEditErrorMessages.setMessage(MatContext.get().getMessageDelegate().getOneAndMessage());
 			return;
@@ -2025,6 +2107,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	
 	public void onClickTimingButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		handlePropertyGrid(new Rel());
 	}
 
@@ -2040,6 +2123,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	}	
 	public void onClickAddPhraseButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		deselectLibrary();
 		handlePropertyGrid(new SimpleStatement(appController));
 	}
@@ -2056,6 +2140,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	}	
 	public void onClickInsertPhraseButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		handlePropertyGrid(new InsertPhrase());
 	}
 
@@ -2067,6 +2152,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		
 	public void onCutButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		onCopyButtonClicked(event);
 		if (!appController.deleteDiagramObject(currentCriterion, currentDiagramObject))
 			System.out.println("Unable to delete!");
@@ -2089,6 +2175,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	
 	public void onCopyButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		clipboardTraversalTree = appController.findDiagramObject(currentDiagramObject).clone(appController);
 		updateEditButtons(true);
 	}
@@ -2101,6 +2188,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		
 	public void onPasteButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if (clipboardTraversalTree == null)
 			return;
 
@@ -2130,14 +2218,16 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		updateEditButtons(false);
 		
 		//******************
-		if(doSave)
-			appController.saveMainPhrases();		
+		//Auto Save Commented for Canvas Sub Tabs
+		/*if(doSave)
+			appController.saveMainPhrases();	*/	
 		//******************
 	}
 
 	@UiHandler("userDefinedPastedCriterionOkButton")
 	public void onUserDefinedPastedCriterionOkButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
 			clearPropEditMessages();
 			String newName = userDefinedPastedCriterionTextBox.getText().trim();
@@ -2180,7 +2270,8 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 			libraryTabPanel.selectTab(CLAUSE_LIBRARY_TAB);
 			
 			//******************
-			appController.saveMainPhrases();		
+			//Auto Save Commented for Canvas Sub Tabs
+		//	appController.saveMainPhrases();		
 		//******************
 		}
 	}
@@ -2189,6 +2280,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	public void onUserDefinedPastedCriterionCancelButtonClicked(ClickEvent event) {
 		if(!isLoading(true)){
 			MatContext.get().clearDVIMessages();
+			appController.getSaveErrorMessages().clear();
 			endUserDefinedPastedCriterionEdit();
 		}
 	}
@@ -2252,6 +2344,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	}
 	public void onDeleteButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		boolean showAlert = false;
 		
 		if (currentDiagramObject instanceof Criterion) {
@@ -2299,6 +2392,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	}	
 	public void onEditButtonClicked(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if (currentDiagramObject instanceof PlaceHolder)
 			selectMeasurePhrase(((PlaceHolder)currentDiagramObject).getIdentity());
 		else
@@ -2429,6 +2523,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 
 	protected void drawTree(TraversalTree t, int top, boolean clickable) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		zoomCanvasDelegate.drawReset(top);
 		zoomCanvasDelegate.drawMinus(top);
 		zoomCanvasDelegate.drawPlus(top);
@@ -2439,6 +2534,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("diagramTreeExpandButton")
 	public void onClickDiagramTreeExpandButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
 			setVisible(diagramTreeExpandButton, false);
 			setVisible(diagramTreeCollapseButton, true);
@@ -2457,8 +2553,10 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	public void diagramKeyDownEvents(KeyDownEvent event) {
 		//Control-Alt-s
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(event.isAltKeyDown() && event.isControlKeyDown() && event.getNativeKeyCode()==83  && editable){
-		    appController.saveMainPhrases();
+			//Auto Save Commented for Canvas Sub Tabs
+			// appController.saveMainPhrases();
 		    Command waitForSave = new Command(){
 		    	@Override
 		    	public void execute() {
@@ -2485,6 +2583,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@UiHandler("diagramTreeCollapseButton")
 	public void onClickDiagramTreeCollapseButton(ClickEvent event) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		if(!isLoading(true)){
 			setVisible(diagramTreeExpandButton, true);
 			setVisible(diagramTreeCollapseButton, false);		
@@ -2530,6 +2629,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 		@Override
 		public void onSelection(SelectionEvent event) {
 			MatContext.get().clearDVIMessages();
+			appController.getSaveErrorMessages().clear();
 			removePropertyEditor();
 			hideMeasurePhraseTextArea();
 			TreeItem item = (TreeItem) ((SelectionEvent)event).getSelectedItem();
@@ -2815,6 +2915,7 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	@Override
 	public void showSavedMessage(final boolean success) {
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		//messageHolder.clear();
 		Timer t = new Timer() {
 			@Override
@@ -3214,9 +3315,11 @@ public class DiagramViewImpl<T> extends Composite implements DiagramView<T> {
 	private void doPhraseChangeHandlerBehavior(ListBox listBox){
 		/* performing save op because there may have been changes in the property editor
 		   prior to making a selection in the measure phrase library */
-		doSave(false);
+		//Auto Save uncommented - On Save Phrase, Canvas changes are getting refreshed.(date:2/5/2013) 
+		//doSave(false);
 		
 		MatContext.get().clearDVIMessages();
+		appController.getSaveErrorMessages().clear();
 		String itemValue = listBox.getValue(listBox.getSelectedIndex());
 		if (itemValue != null && itemValue.equalsIgnoreCase(ConstantMessages.USER_DEFINED_CONTEXT_DESC)) {
 			return;

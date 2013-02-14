@@ -51,7 +51,7 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 	protected Panel pageSizeSelector = new FlowPanel();
 	protected Panel pageSelector = new HorizontalPanel();
 	private HTML viewingNumber = new HTML();
-	protected Grid508 dataTable = new Grid508();
+	public Grid508 dataTable = new Grid508();
 	private Grid508 QDSDataTable = new Grid508();
 	//private FlexTable flexTable = new FlexTable();
 	
@@ -108,7 +108,7 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 	public void setPageSize(int i) {
 		currentPageSize = i;
 	}
-	private void buildPageSizeSelector() {
+	public void buildPageSizeSelector() {
 		pageSizeSelector.clear();
 
 		pageSizeSelector.add(new HTML("View:&nbsp; "));
@@ -390,7 +390,8 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 		buildPageSizeSelector();
 	}
 	
-	protected void buildSearchResultsColumnHeaders(int numRows,int numColumns,SearchResults<T> results, boolean isAscending,boolean isChecked){
+	public void buildSearchResultsColumnHeaders(int numRows,int numColumns,SearchResults<T> results, boolean isAscending,boolean isChecked){
+		boolean isClearAll = false;
 		for(int i = 0; i < numColumns; i++) {
 			Panel headerPanel = new FlowPanel();
 			Widget columnHeader = null;
@@ -403,7 +404,7 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 					public void onClick(ClickEvent event) {
 					
 						MatContext.get().clearDVIMessages();
-					
+						
 						sortColumnIndex = columnIndex;
 						PageSortEvent evt = new PageSortEvent(columnIndex);
 						SearchView.this.fireEvent(evt);
@@ -449,17 +450,74 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 				columnHeader.setTitle(title);
 			}
 			else{
-				columnHeader = new Label(results.getColumnHeader(i));
-				columnHeader.setTitle(results.getColumnHeader(i));
-				//Need to do this for IE or it centers them
-				columnHeader.setStyleName("leftAligned");
+				if("ExportClear".equals(results.getColumnHeader(i))){
+					isClearAll = true;
+					HorizontalPanel panel = new HorizontalPanel();
+					panel.add(new Label("Export"));
+					Anchor clearAnchor = new Anchor("(Clear)");
+					clearAnchor.setStyleName("clearAnchorStyle");
+					clearAnchor.addClickHandler(new ClickHandler() {
+						@Override
+						public void onClick(ClickEvent event) {
+							if(MatContext.get().getManageMeasureSearchModel().getSelectedExportIds() != null){
+								MatContext.get().getManageMeasureSearchModel().getSelectedExportIds().clear();
+							}
+							MatContext.get().getManageMeasureSearchView().clearBulkExportCheckBoxes(dataTable);
+							MatContext.get().getManageMeasureSearchView().getErrorMessageDisplayForBulkExport().clear();
+						}
+					});
+					panel.add(clearAnchor);
+					headerPanel.add(panel);
+				}else if("TransferClear".equals(results.getColumnHeader(i))){
+					isClearAll = true;
+					HorizontalPanel panel = new HorizontalPanel();
+					panel.add(new Label("Transfer"));
+					Anchor clearAnchor = new Anchor("(Clear)");
+					clearAnchor.setStyleName("clearAnchorStyle");
+					clearAnchor.addClickHandler(new ClickHandler() {
+						@Override
+						public void onClick(ClickEvent event) {
+							if(MatContext.get().getManageCodeListSearchModel().getTransferValueSetIDs() != null){
+								MatContext.get().getManageCodeListSearchModel().getTransferValueSetIDs().clear();
+								MatContext.get().getManageCodeListSearchModel().getLisObjectId().clear();
+							}
+							MatContext.get().getManageCodeListSearchView().clearAllCheckBoxes(dataTable);
+							MatContext.get().getManageCodeListSearchView().getErrorMessageDisplay().clear();
+						}
+					});
+					panel.add(clearAnchor);
+					headerPanel.add(panel);
+				}else if("TransferMeasureClear".equals(results.getColumnHeader(i))){
+					isClearAll = true;
+					HorizontalPanel panel = new HorizontalPanel();
+					panel.add(new Label("Transfer"));
+					Anchor clearAnchor = new Anchor("(Clear)");
+					clearAnchor.setStyleName("clearAnchorStyle");
+					clearAnchor.addClickHandler(new ClickHandler() {
+						@Override
+						public void onClick(ClickEvent event) {
+							if(MatContext.get().getManageMeasureSearchModel().getSelectedTransferResults() != null){
+								MatContext.get().getManageMeasureSearchModel().getSelectedTransferResults().clear();
+								MatContext.get().getManageMeasureSearchModel().getSelectedTransferIds().clear();
+							}
+							MatContext.get().getManageMeasureSearchView().clearBulkExportCheckBoxes(dataTable);
+							MatContext.get().getManageMeasureSearchView().getErrorMessagesForTransferOS().clear();
+						}
+					});
+					panel.add(clearAnchor);
+					headerPanel.add(panel);
+				}
+				else{
+					columnHeader = new Label(results.getColumnHeader(i));
+					columnHeader.setTitle(results.getColumnHeader(i));
+					//Need to do this for IE or it centers them
+					columnHeader.setStyleName("leftAligned");
+				}
+				
 			}
-			
-			
-			
-			
 			headerPanel.setStylePrimaryName("noBorder");
-			headerPanel.add(columnHeader);
+			if(!isClearAll) 
+				headerPanel.add(columnHeader);
 			dataTable.setWidget(0, i,headerPanel);
 			dataTable.getColumnFormatter().setWidth(i, results.getColumnWidth(i));
 			dataTable.getColumnFormatter().addStyleName(i, "noWrap");
@@ -614,7 +672,7 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 	
 	
 	
-	protected void setViewingRange(long start, long end, long total) {
+	public void setViewingRange(long start, long end, long total) {
 		if(total == 0) {
 //			((HTML) viewingNumber.getWidget()).setHTML("No Records Found");
 			viewingNumber.setHTML("No Records Found ");
@@ -701,5 +759,17 @@ public class SearchView<T> implements HasSelectionHandlers<T>,
 			}
 		}
 		
+	}
+	/**
+	 * @return the dataTable
+	 */
+	public Grid508 getDataTable() {
+		return dataTable;
+	}
+	/**
+	 * @param dataTable the dataTable to set
+	 */
+	public void setDataTable(Grid508 dataTable) {
+		this.dataTable = dataTable;
 	}
 }
