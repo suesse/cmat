@@ -227,5 +227,9 @@
         </fileset>
 	  </pmd>
 	</target>
-	
+
+	<target name="deploy-tomcat" depends="make.war" description="Deploys war to Tomcat">
+		<copy file="${output.file}" todir="${tomcat.application.deploy.dir}"/>
+	</target>
+
 </project>
