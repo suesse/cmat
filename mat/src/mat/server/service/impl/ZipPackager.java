@@ -3,12 +3,12 @@ package mat.server.service.impl;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import mat.shared.FileNameUtility;
 
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.apache.tools.zip.ZipEntry;
-import org.apache.tools.zip.ZipOutputStream;
 
 /**
  * User Story ID 357 
