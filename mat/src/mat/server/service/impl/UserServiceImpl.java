@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -18,11 +19,13 @@ import mat.client.shared.NameValuePair;
 import mat.dao.SecurityRoleDAO;
 import mat.dao.StatusDAO;
 import mat.dao.UserDAO;
+import mat.model.AuditLog;
 import mat.model.SecurityRole;
 import mat.model.Status;
 import mat.model.User;
 import mat.model.UserPassword;
 import mat.model.UserSecurityQuestion;
+import mat.server.LoggedInUserUtil;
 import mat.server.service.CodeListService;
 import mat.server.service.UserIDNotUnique;
 import mat.server.service.UserService;
@@ -280,7 +283,33 @@ public class UserServiceImpl implements UserService {
 		notifyUserOfNewAccount(user);
 		notifyUserOfTemporaryPassword(user, newPassword);
 	}
-	
+
+	@Override
+	public SaveUpdateUserResult saveHtpUser(User user) {
+		SaveUpdateUserResult result = new SaveUpdateUserResult();
+
+		if (userDAO.userExists(user.getEmailAddress())) {
+			result.setSuccess(false);
+			result.setFailureReason(SaveUpdateUserResult.ID_NOT_UNIQUE);
+			result.setMessages(Collections.singletonList("Failed to create Mat user."));
+		} else {
+			setUserPassword(user, user.getPassword().getPassword(), false);
+			user.setMiddleInit("");
+			user.setTitle("");
+			user.setStatus(getStatusObject(true));
+			SecurityRole role = new SecurityRole();
+			role.setId("3");
+			role.setDescription("User");
+			user.setSecurityRole(role);
+			user.setActivationDate(new Date());
+			LoggedInUserUtil.setLoggedInUser("admin");
+			userDAO.save(user);
+			result.setSuccess(true);
+		}
+
+		return result;
+	}
+
 	public void notifyUserOfNewAccount(User user) {
 		SimpleMailMessage msg = new SimpleMailMessage(this.templateMessage);
 		msg.setSubject(ServerConstants.NEW_ACCESS_SUBJECT);

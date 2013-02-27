@@ -30,4 +30,5 @@ public interface UserService {
 	public void setUserSignInDate(String userid);
 	public void setUserSignOutDate(String userid);
 	List<String> getFooterURLs();
+	public SaveUpdateUserResult saveHtpUser(User user);
 }
