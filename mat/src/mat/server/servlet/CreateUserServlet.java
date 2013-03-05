@@ -67,15 +67,15 @@ public class CreateUserServlet extends HttpServlet {
 		SaveUpdateUserResult result = userService.saveHtpUser(user);
 
 		response.setStatus(HttpServletResponse.SC_OK);
-			try {
-				if (!result.isSuccess()) {
-					response.getOutputStream().print(result.getMessages().get(0));
-				}
-				else {
-					response.getOutputStream().print("Created ");
-				}
-			} catch (IOException ioe) {
-				logger.warn("Failed to write message to response output stream.", ioe);
+		try {
+			if (!result.isSuccess()) {
+				response.getOutputStream().print(result.getMessages().get(0));
 			}
+			else {
+				response.getOutputStream().print("Created ");
+			}
+		} catch (IOException ioe) {
+			logger.warn("Failed to write message to response output stream.", ioe);
+		}
 	}
 }

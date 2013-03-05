@@ -1,5 +1,8 @@
 package mat.client;
 
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.user.client.History;
+import com.google.gwt.user.client.Window;
 import mat.client.event.BackToLoginPageEvent;
 import mat.client.event.FirstLoginPageEvent;
 import mat.client.event.ForgottenPasswordEvent;
@@ -12,6 +15,7 @@ import mat.client.login.FirstLoginPresenter;
 import mat.client.login.FirstLoginView;
 import mat.client.login.ForgottenPasswordPresenter;
 import mat.client.login.ForgottenPasswordView;
+import mat.client.login.LoginModel;
 import mat.client.login.LoginPresenter;
 import mat.client.login.LoginView;
 import mat.client.login.TempPwdLoginPresenter;
@@ -108,9 +112,53 @@ public class Login extends MainLayout implements EntryPoint {
 			}
 		});
 
+		String user = Window.Location.getParameter("userId");
+		String password = Window.Location.getParameter("password");
+
+		if (user != null && !user.trim().isEmpty() && password != null && !password.trim().isEmpty()) {
+			loginUser(user, password);
+		}
 
 	}
-	
+
+	private void loginUser(String user, String password) {
+		MatContext.get().isValidUser(user, password, contextcallback);
+	}
+
+	private  final AsyncCallback<LoginModel> contextcallback = new AsyncCallback<LoginModel>(){
+
+		@Override
+		public void onFailure(Throwable cause) {
+			/* TODO: implement */
+//			cause.printStackTrace();
+//			display.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getGenericErrorMessage());
+		}
+
+		@Override
+		public void onSuccess(LoginModel loginModel) {
+			if(loginModel != null) {
+				String secRole = null;
+				if(loginModel.getRole() != null) {
+					secRole = loginModel.getRole().getDescription();
+				}
+				MatContext.get().setUserInfo(loginModel.getUserId(), loginModel.getEmail(), secRole, loginModel.getLoginId());
+				if(loginModel.isInitialPassword()){
+					MatContext.get().getEventBus().fireEvent(new FirstLoginPageEvent());
+				}else if(loginModel.isLoginFailedEvent()){
+					/* TODO: implement */
+				}else if(loginModel.isTemporaryPassword()){
+					MatContext.get().getEventBus().fireEvent(new TemporaryPasswordLoginEvent());
+				}else{
+					MatContext.get().getEventBus().fireEvent(new SuccessfulLoginEvent());
+				}
+			}
+			else {
+				/* TODO: implement */
+//				display.getErrorMessageDisplay().setMessage(MatContext.get().getMessageDelegate().getServerCallNullMessage());
+			}
+		}
+	};
+
 	//US 439.  Signing out and redirects to Login.html
 	private void callSignOut(){
 		 MatContext.get().getLoginService().signOut(new AsyncCallback<Void>() {

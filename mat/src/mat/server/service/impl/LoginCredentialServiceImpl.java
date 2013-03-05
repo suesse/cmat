@@ -73,12 +73,12 @@ public class LoginCredentialServiceImpl implements LoginCredentialService {
 				
 				boolean alreadySignedIn = MatContext.get().isAlreadySignedIn(lastSignOut, lastSignIn, currentTimeStamp);
 				
-				if(alreadySignedIn){
-					//USER ALREADY LOGGED IN
-					logger.info("USER ALREADY LOGGED IN :" + userId);
-					loginModel.setErrorMessage(MatContext.get().getMessageDelegate().getLoginFailedAlreadyLoggedInMessage());
-					loginModel.setLoginFailedEvent(true);
-				}else{
+//				if(alreadySignedIn){
+//					//USER ALREADY LOGGED IN
+//					logger.info("USER ALREADY LOGGED IN :" + userId);
+//					loginModel.setErrorMessage(MatContext.get().getMessageDelegate().getLoginFailedAlreadyLoggedInMessage());
+//					loginModel.setLoginFailedEvent(true);
+//				}else{
 					logger.debug("Password matched, not locked out");
 					if(!userDetails.getUserPassword().isInitial() && !userDetails.getUserPassword().isTemporaryPassword()) {
 						setAuthenticationToken(userDetails);
@@ -87,8 +87,8 @@ public class LoginCredentialServiceImpl implements LoginCredentialService {
 //					userDetails.setSignInDate(currentTimeStamp);
 					hibernateUserService.saveUserDetails(userDetails);
 					logger.info("Roles for " + userId + ": " + userDetails.getRoles().getDescription());
-				}
-			}else{
+//				}
+			}else   {
 				 logger.debug("Authentication Exception, need to log the failed attempts and increment the lockCounter");
 				 loginModel.setLoginFailedEvent(true);
 				 loginModel.setUserId(userId);
