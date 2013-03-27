@@ -27,6 +27,7 @@ import mat.model.UserPassword;
 import mat.model.UserSecurityQuestion;
 import mat.server.LoggedInUserUtil;
 import mat.server.service.CodeListService;
+import mat.server.service.LoginCredentialService;
 import mat.server.service.UserIDNotUnique;
 import mat.server.service.UserService;
 import mat.server.util.ServerConstants;
@@ -42,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public class UserServiceImpl implements UserService {
 	private static final Log logger = LogFactory.getLog(UserServiceImpl.class);
@@ -305,6 +307,8 @@ public class UserServiceImpl implements UserService {
 			LoggedInUserUtil.setLoggedInUser("admin");
 			userDAO.save(user);
 			result.setSuccess(true);
+			LoggedInUserUtil.setLoggedInUser(null);
+			SecurityContextHolder.clearContext();
 		}
 
 		return result;

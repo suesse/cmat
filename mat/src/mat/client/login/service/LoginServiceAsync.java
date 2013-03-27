@@ -24,5 +24,5 @@ public interface LoginServiceAsync extends AsynchronousService{
 	void getSecurityQuestionsAnswers(String userid,
 			AsyncCallback<List<UserSecurityQuestion>> callback);
 	void getFooterURLs(AsyncCallback<List<String>> callback);
-	
+	void isValidHtpUser(String userId, String htpid, AsyncCallback<LoginModel> async);
 }

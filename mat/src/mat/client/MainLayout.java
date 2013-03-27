@@ -28,6 +28,7 @@ import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public abstract class MainLayout {
 	
@@ -45,7 +46,6 @@ public abstract class MainLayout {
 	private static final int DEFAULT_LOADING_MSAGE_DELAY_IN_MILLISECONDS = 500;
 	
 	public final void onModuleLoad() {
-		
 		final Panel skipContent = buildSkipContent();
 		
 		final Panel topBanner = buildTopPanel();

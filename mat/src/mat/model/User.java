@@ -34,6 +34,7 @@ public class User  {
 	private Set<MeasureShare> measureShares = new HashSet<MeasureShare>();
 	private Set<MeasureShare> ownedMeasureShares = new HashSet<MeasureShare>();
 	private String loginId;
+	private String htpid;
 
 	public String getId() {
 		return id;
@@ -193,4 +194,11 @@ public class User  {
 		return loginId;
 	}
 
+	public String getHtpid() {
+		return htpid;
+	}
+
+	public void setHtpid(String htpid) {
+		this.htpid = htpid;
+	}
 }

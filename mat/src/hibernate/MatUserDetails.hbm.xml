@@ -19,5 +19,6 @@
 	<property name="activationDate" column="ACTIVATION_DATE" type="timestamp"/>
     <property name="emailAddress" column="EMAIL_ADDRESS" type="string"/>
     <property name="loginId" column="LOGIN_ID" type="string"/>
+    <property name="htpid" column="HTP_ID" type="string"/>
    </class>
 </hibernate-mapping>

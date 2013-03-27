@@ -45,9 +45,14 @@ public class LoginServiceImpl extends SpringRemoteServiceServlet implements Logi
 
 
 	@Override
-	public LoginModel  isValidUser(String userId, String password) {
+	public LoginModel isValidUser(String userId, String password) {
 		LoginModel loginModel = getLoginCredentialService().isValidUser(userId, password);
 		return loginModel;
+	}
+
+	@Override
+	public LoginModel isValidHtpUser(String userId, String htpid) {
+		return getLoginCredentialService().isValidHtpUser(userId, htpid);
 	}
 	
 	public ForgottenPasswordResult forgotPassword(String loginId, 

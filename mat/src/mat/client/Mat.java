@@ -95,18 +95,18 @@ public class Mat extends MainLayout implements EntryPoint, Enableable{
 			if(result == null){
 				redirectToLogin();
 			}else{
-				final Date lastSignIn = result.signInDate;
-				final Date lastSignOut = result.signOutDate;
-				final Date current = new Date();
-				final boolean isAlreadySignedIn = MatContext.get().isAlreadySignedIn(lastSignOut, lastSignIn, current);
-				if(isAlreadySignedIn){
-					redirectToLogin();
-				}
-				else{
+//				final Date lastSignIn = result.signInDate;
+//				final Date lastSignOut = result.signOutDate;
+//				final Date current = new Date();
+//				final boolean isAlreadySignedIn = MatContext.get().isAlreadySignedIn(lastSignOut, lastSignIn, current);
+//				if(isAlreadySignedIn){
+//					redirectToLogin();
+//				}
+//				else{
 					MatContext.get().setUserSignInDate(result.userId);
 					MatContext.get().setUserInfo(result.userId, result.userEmail, result.userRole,result.loginId);
 					loadMatWidgets();
-				}
+//				}
 			}
         }
 	};

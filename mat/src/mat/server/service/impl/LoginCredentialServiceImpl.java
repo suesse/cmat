@@ -6,6 +6,7 @@ import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -154,60 +155,64 @@ public class LoginCredentialServiceImpl implements LoginCredentialService {
 			loginModel.setLoginFailedEvent(true);
 			loginModel.setErrorMessage(MatContext.get().getMessageDelegate().getLoginFailedMessage());
 		}
-		
-		if(!loginModel.isLoginFailedEvent()){
-			String s = "\nlogin_success\n";
 
-			String chartReport ="CHARTREPORT";
-			
-			List<MemoryPoolMXBean> pbeans = ManagementFactory.getMemoryPoolMXBeans();
-			for( MemoryPoolMXBean bean: pbeans){
-				MemoryUsage mused = bean.getPeakUsage();
-				for(String x :bean.getMemoryManagerNames()){
-					s +="MemoryManager "+ x+ ":\n";
-				}
-				s += "poolInit:      \t"+mused.getInit() + " ";
-				s += "poolPeak:      \t"+mused.getUsed() +" " ;
-				s += "poolMax:       \t"+mused.getMax()+"\n\n";
-			}
+//		if(!loginModel.isLoginFailedEvent())
+//			logChartReport();
 
-			MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
-			//bean.setVerbose(true);
-
-			MemoryUsage mu = bean.getNonHeapMemoryUsage();
-			//[MemoryUsage]
-			//\nNonHeap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>
-			//\nHeap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>		
-			
-			s += "PermGen init:      \t"+mu.getInit()+"\n";
-			s += "PermGen committed: \t"+mu.getCommitted()+" ";
-			s += "PermGen Max:       \t"+mu.getMax()+" ";
-			s += "PermGen Used:      \t"+mu.getUsed()+" ";
-			chartReport +=" "+mu.getUsed();
-//			ManagementFactory.
-			
-			mu =bean.getHeapMemoryUsage();
-			// Heap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>			
-			s += "Heap init:      \t"+mu.getInit()+" ";
-			s += "Heap committed: \t"+mu.getCommitted()+" ";
-			s += "Heap Max:       \t"+mu.getMax()+" ";
-			s += "Heap Used:      \t"+mu.getUsed()+"\n";
-
-			chartReport +=" "+mu.getUsed();
-			
-			ThreadMXBean tBean = ManagementFactory.getThreadMXBean();
-			s += "Threads running:   \t"+tBean.getThreadCount()+"\n";
-			
-			chartReport +=" "+tBean.getThreadCount();
-			
-			chartReport +=" "+System.currentTimeMillis();
-			
-			Log logger = LogFactory.getLog(PreventCachingFilter.class);
-			chartReport +="\n";
-			s+= "/login_success\n" + chartReport;
-			logger.info(s);
-		}
 		return loginModel;
+	}
+
+	private void logChartReport() {
+		String s = "\nlogin_success\n";
+
+		String chartReport ="CHARTREPORT";
+
+		List<MemoryPoolMXBean> pbeans = ManagementFactory.getMemoryPoolMXBeans();
+		for( MemoryPoolMXBean bean: pbeans){
+			MemoryUsage mused = bean.getPeakUsage();
+			for(String x :bean.getMemoryManagerNames()){
+				s +="MemoryManager "+ x+ ":\n";
+			}
+			s += "poolInit:      \t"+mused.getInit() + " ";
+			s += "poolPeak:      \t"+mused.getUsed() +" " ;
+			s += "poolMax:       \t"+mused.getMax()+"\n\n";
+		}
+
+		MemoryMXBean bean = ManagementFactory.getMemoryMXBean();
+		//bean.setVerbose(true);
+
+		MemoryUsage mu = bean.getNonHeapMemoryUsage();
+		//[MemoryUsage]
+		//\nNonHeap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>
+		//\nHeap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>
+
+		s += "PermGen init:      \t"+mu.getInit()+"\n";
+		s += "PermGen committed: \t"+mu.getCommitted()+" ";
+		s += "PermGen Max:       \t"+mu.getMax()+" ";
+		s += "PermGen Used:      \t"+mu.getUsed()+" ";
+		chartReport +=" "+mu.getUsed();
+//			ManagementFactory.
+
+		mu =bean.getHeapMemoryUsage();
+		// Heap|init:<<val>>|committed:<<val>>|max:<<val>>|used:<<val>>
+		s += "Heap init:      \t"+mu.getInit()+" ";
+		s += "Heap committed: \t"+mu.getCommitted()+" ";
+		s += "Heap Max:       \t"+mu.getMax()+" ";
+		s += "Heap Used:      \t"+mu.getUsed()+"\n";
+
+		chartReport +=" "+mu.getUsed();
+
+		ThreadMXBean tBean = ManagementFactory.getThreadMXBean();
+		s += "Threads running:   \t"+tBean.getThreadCount()+"\n";
+
+		chartReport +=" "+tBean.getThreadCount();
+
+		chartReport +=" "+System.currentTimeMillis();
+
+		Log logger = LogFactory.getLog(PreventCachingFilter.class);
+		chartReport +="\n";
+		s+= "/login_success\n" + chartReport;
+		logger.info(s);
 	}
 
 	@Override
@@ -322,5 +327,24 @@ public class LoginCredentialServiceImpl implements LoginCredentialService {
 	
 		
 	}
-	
+
+	@Override
+	public LoginModel isValidHtpUser(String user, String htpid) {
+		LoginModel loginModel = new LoginModel();
+		MatUserDetails userDetails = (MatUserDetails) hibernateUserService.loadUserByUsername(user);
+		if (userDetails != null && userDetails.getHtpid().equals(htpid) && !userDetails.getStatus().getId().equals("2")) {
+			setAuthenticationToken(userDetails);
+			loginModel = loginModelSetter(loginModel, userDetails);
+		}
+		else {
+			loginModel.setLoginFailedEvent(true);
+			loginModel.setErrorMessage(MatContext.get().getMessageDelegate().getLoginFailedMessage());
+		}
+
+//		userDetails.setSignInDate(new Timestamp(Calendar.getInstance().getTimeInMillis()));
+//		hibernateUserService.saveUserDetails(userDetails);
+
+		return loginModel;
+	}
+
 }

@@ -279,6 +279,10 @@ public class MatContext implements IsSerializable {
 	public void isValidUser(String username, String Password,AsyncCallback<LoginModel> callback){
 		getLoginService().isValidUser(username, Password, callback);
 	}
+
+	public void isValidHtpUser(String username, String htpid, AsyncCallback<LoginModel> callback) {
+		getLoginService().isValidHtpUser(username, htpid, callback);
+	}
 	
 	public void getListBoxData(AsyncCallback<CodeListService.ListBoxData> listBoxCallback){
 		getCodeListService().getListBoxData(listBoxCallback);
@@ -424,6 +428,8 @@ public class MatContext implements IsSerializable {
 	
 	public void redirectToHtmlPage(String html) {
 		UrlBuilder urlBuilder = Window.Location.createUrlBuilder();
+		urlBuilder.removeParameter("userId");
+		urlBuilder.removeParameter("htpId");
 		String path = Window.Location.getPath();
 		path=path.substring(0, path.lastIndexOf('/'));
 		path += html;

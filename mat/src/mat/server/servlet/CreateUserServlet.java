@@ -47,6 +47,7 @@ public class CreateUserServlet extends HttpServlet {
 		user.setEmailAddress(request.getParameter("email"));
 		user.setFirstName(request.getParameter("firstName"));
 		user.setLastName(request.getParameter("lastName"));
+		user.setHtpid(request.getParameter("htpid"));
 
 		/* Optional Parameters */
 		user.setPhoneNumber(request.getParameter("phone"));

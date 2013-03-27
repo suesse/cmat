@@ -1,7 +1,6 @@
 package mat.client;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.user.client.History;
 import com.google.gwt.user.client.Window;
 import mat.client.event.BackToLoginPageEvent;
 import mat.client.event.FirstLoginPageEvent;
@@ -28,6 +27,7 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Panel;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 public class Login extends MainLayout implements EntryPoint {
 
@@ -63,7 +63,6 @@ public class Login extends MainLayout implements EntryPoint {
 		MatContext.get().getEventBus().addHandler(SuccessfulLoginEvent.TYPE, new SuccessfulLoginEvent.Handler() {
 			
 			public void onSuccessfulLogin(final SuccessfulLoginEvent event) {
-//				MatContext.get().openNewHtmlPage("/Mat.html");
 				MatContext.get().redirectToHtmlPage(ClientConstants.HTML_MAT);
 			}
 		});
@@ -113,16 +112,16 @@ public class Login extends MainLayout implements EntryPoint {
 		});
 
 		String user = Window.Location.getParameter("userId");
-		String password = Window.Location.getParameter("password");
+		String htpId = Window.Location.getParameter("htpId");
 
-		if (user != null && !user.trim().isEmpty() && password != null && !password.trim().isEmpty()) {
-			loginUser(user, password);
+		if (user != null && !user.trim().isEmpty() && htpId != null && !htpId.trim().isEmpty()) {
+			loginHtpUser(user, htpId);
 		}
 
 	}
 
-	private void loginUser(String user, String password) {
-		MatContext.get().isValidUser(user, password, contextcallback);
+	private void loginHtpUser(String user, String htpId) {
+		MatContext.get().isValidHtpUser(user, htpId, contextcallback);
 	}
 
 	private  final AsyncCallback<LoginModel> contextcallback = new AsyncCallback<LoginModel>(){
